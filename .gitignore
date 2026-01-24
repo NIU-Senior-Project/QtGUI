@@ -1,0 +1,23 @@
+# C++ objects and libs
+*.slo
+*.lo
+*.o
+*.a
+*.la
+*.lai
+*.so
+*.dll
+*.exe
+
+# Qt specific
+*.user
+*.qmake.stash
+Makefile*
+.qmake.cache
+.qmake.stash
+*.autosave
+
+# Qt Creator generated build folders
+build-*/
+Debug/
+Release/
