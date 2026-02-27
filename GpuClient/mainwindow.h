@@ -2,7 +2,8 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <QTcpSocket>
+#include "machineprovider.h"
+#include "machine.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -18,15 +19,9 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-public slots:
-    void onConnected();
-    void onReadyRead();
-    void onErrorOccurred(QAbstractSocket::SocketError socketError);
-
 private:
     Ui::MainWindow *ui;
-    QTcpSocket *socket;
-    QByteArray buffer;   //暫存尚未分行的資料
+    MachineProvider* provider = nullptr;
 };
 
 #endif // MAINWINDOW_H

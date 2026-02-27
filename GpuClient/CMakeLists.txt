@@ -20,6 +20,12 @@ set(PROJECT_SOURCES
         mainwindow.cpp
         mainwindow.h
         mainwindow.ui
+        machine.h
+        machineprovider_tcp.cpp
+        machineprovider_http.cpp
+        machineprovider.h
+        machineprovider_tcp.h
+        machineprovider_http.h
         ${TS_FILES}
 )
 
