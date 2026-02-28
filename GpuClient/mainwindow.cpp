@@ -73,6 +73,7 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     connect(rent, &RentWindow::machineSelected, this, [this, mission](const Machine& m){
+        ui->statusbar->showMessage("Rent clicked: " + m.name);
         mission->setSelectedMachine(m);
         ui->stack->setCurrentIndex(3);
     });

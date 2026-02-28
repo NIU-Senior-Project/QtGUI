@@ -20,6 +20,7 @@ signals:
     void machineSelected(const Machine& m);
     void goHome();
     void goDebug();
+    void rentClicked(int cardIndex);
 
 private:
     Ui::RentWindow *ui;
