@@ -2,26 +2,25 @@
 #include "./ui_mainwindow.h"
 
 #include <QDebug>
-#include <QLabel>
 #include <QMessageBox>
 #include <QPushButton>
-#include <QScrollArea>
-#include <QStackedWidget>
-#include <QSizePolicy>
-#include <QVBoxLayout>
-#include <QFileDialog>
-#include <QFileInfo>
-#include <QDoubleValidator> 
-#include <utility>
+#include <QDoubleValidator>
+#include <QLayoutItem>
 
-namespace
+#include <QNetworkRequest>
+#include <QNetworkReply>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QUrlQuery>
+
+static void clearLayout(QLayout *layout)
 {
-    const QString kTestTask = QStringLiteral(
-        "Task ID: T-20250125-001\n"
-        "Workload: Stable Diffusion XL render\n"
-        "Assets: /mnt/data/projects/sdxl/scene01\n"
-        "Steps: 50, CFG scale: 7.5\n"
-        "Expected output: 4k PNG x 12");
+    if (!layout) return;
+    while (QLayoutItem *it = layout->takeAt(0)) {
+        if (auto *w = it->widget()) w->deleteLater();
+        delete it;
+    }
 }
 
 MainWindow::MainWindow(QWidget *parent)
@@ -29,32 +28,19 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+
+    nam = new QNetworkAccessManager(this);
+    pollTimer = new QTimer(this);
+    pollTimer->setInterval(2000);
+
     if (ui->edit_p_price) {
-    ui->edit_p_price->setValidator(new QDoubleValidator(0, 999999, 2, ui->edit_p_price));
-    ui->edit_p_price->setPlaceholderText("例如 35.00");
+        ui->edit_p_price->setValidator(new QDoubleValidator(0, 999999, 2, ui->edit_p_price));
+        ui->edit_p_price->setPlaceholderText("例如 35.00");
     }
-    ui->vlay_provider_cards->addWidget(
-        createProviderCard("B", "RTX 4070", "12GB", 35.0, "idle")
-    );
-    ui->vlay_provider_cards->addWidget(
-        createProviderCard("C", "RTX 3080", "10GB", 28.0, "rented:UserA")
-    );
-    ui->edit_file_path->setReadOnly(true);
-    ui->edit_file_path->setPlaceholderText("尚未選擇檔案");
 
-    ui->progress_upload->setRange(0, 100);
-    ui->progress_upload->setValue(0);
-
-    ui->lbl_eta->setText("剩餘時間:-");
     ui->stackedWidget->setCurrentIndex(0);
-    
-    qRegisterMetaType<GPUInfo>("GPUInfo");
-
-    m_gpuCatalog = buildMockData();
-    resetDetailPanel();
 
     setupConnections();
-    populateMarket();
 }
 
 MainWindow::~MainWindow()
@@ -62,243 +48,196 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::setupConnections()
+// -------------------- HTTP: GET /nodes --------------------
+void MainWindow::refreshNodes()
 {
-    if (ui->btn_role_renter)
-    {
-        connect(ui->btn_role_renter, &QPushButton::clicked, this, [this]() {
-            if (ui->stackedWidget)
-            {
-                ui->stackedWidget->setCurrentIndex(1);
-            }
-            resetDetailPanel();
-        });
-    }
-
-    if (ui->btn_role_provider)
-    {
-        connect(ui->btn_role_provider, &QPushButton::clicked, this, [this]() {
-            if (ui->stackedWidget)
-            {
-                ui->stackedWidget->setCurrentIndex(2);
-            }
-        });
-    }
-
-    connect(ui->btn_upload_task, &QPushButton::clicked, this, [this]() {
-    QString path = QFileDialog::getOpenFileName(this, "選擇要上傳的檔案");
-    if (path.isEmpty()) return;
-
-    QFileInfo info(path);
-    ui->edit_file_path->setText(info.absoluteFilePath());
-    uploadTotalBytes = info.size();
-    uploadSentBytes = 0;
-
-    ui->progress_upload->setValue(0);
-
-    const double speedBytesPerSec = 2.0 * 1024 * 1024;
-    int etaSec = (uploadTotalBytes > 0) ? int(uploadTotalBytes / speedBytesPerSec) : 0;
-    if (etaSec < 1) etaSec = 1;
-    ui->lbl_eta->setText(QString("剩餘時間:約 %1 秒").arg(etaSec));
-
-    if (!uploadTimer) {
-        uploadTimer = new QTimer(this);
-        connect(uploadTimer, &QTimer::timeout, this, [this]() {
-            const qint64 chunk = 200 * 1024; 
-            uploadSentBytes += chunk;
-            if (uploadSentBytes > uploadTotalBytes) uploadSentBytes = uploadTotalBytes;
-
-            int percent = (uploadTotalBytes > 0)
-                ? int((uploadSentBytes * 100) / uploadTotalBytes)
-                : 100;
-
-            ui->progress_upload->setValue(percent);
-            const double speedBytesPerSec = 2.0 * 1024 * 1024;
-            qint64 remain = uploadTotalBytes - uploadSentBytes;
-            int remainSec = int(remain / speedBytesPerSec);
-            if (remainSec < 0) remainSec = 0;
-
-            ui->lbl_eta->setText(QString("剩餘時間:約 %1 秒").arg(remainSec));
-
-            if (uploadSentBytes >= uploadTotalBytes) {
-                uploadTimer->stop();
-                ui->lbl_eta->setText("剩餘時間:上傳完成 ✅");
-                QMessageBox::information(this, "上傳完成",
-                    "檔案已成功上傳(Demo)。\n下一步可改成送到後端並取得 task_id / 執行狀態。");
-            }
-        });
-    }
-
-    uploadTimer->start(100); 
-    });
-
-    if (ui->btn_back_renter)
-    {
-        connect(ui->btn_back_renter, &QPushButton::clicked, this, [this]() {
-            ui->stackedWidget->setCurrentIndex(0);
-            resetDetailPanel();
-        });
-    }
-
-    if (ui->btn_back_provider)
-    {
-        connect(ui->btn_back_provider, &QPushButton::clicked, this, [this]() {
-            ui->stackedWidget->setCurrentIndex(0);
-            resetDetailPanel();
-        });
-    }
-}
-
-void MainWindow::populateMarket()
-{
-    auto *renterLayout = ensureScrollAreaLayout(ui->scrollArea_market);
-    auto *providerLayout = ensureScrollAreaLayout(ui->sa_provider_market);
-
-    auto rebuild = [this](QVBoxLayout *layout, bool renterList) {
-        if (!layout)
-            return;
-
-        QLayoutItem *item = nullptr;
-        while ((item = layout->takeAt(0)) != nullptr)
-        {
-            if (auto *widget = item->widget())
-            {
-                widget->deleteLater();
-            }
-            delete item;
-        }
-
-        for (const GPUInfo &info : std::as_const(m_gpuCatalog))
-        {
-            QWidget *card = createMarketCard(info, renterList);
-            layout->addWidget(card);
-        }
-
-        layout->addStretch(1);
-    };
-
-    rebuild(renterLayout, true);
-    rebuild(providerLayout, false);
-}
-
-QVector<GPUInfo> MainWindow::buildMockData() const
-{
-    return {
-        {QStringLiteral("NVIDIA RTX 4090"), QStringLiteral("24 GB GDDR6X"), QStringLiteral("$6.50/hr"), QStringLiteral("Flagship Ada GPU for extreme workloads.")},
-        {QStringLiteral("NVIDIA RTX 4080"), QStringLiteral("16 GB GDDR6X"), QStringLiteral("$5.20/hr"), QStringLiteral("Balanced choice for render and AI tasks.")},
-        {QStringLiteral("NVIDIA A100 80GB"), QStringLiteral("80 GB HBM2e"), QStringLiteral("$12.00/hr"), QStringLiteral("Datacenter-grade acceleration for large models." )},
-        {QStringLiteral("NVIDIA H100 80GB"), QStringLiteral("80 GB HBM3"), QStringLiteral("$14.50/hr"), QStringLiteral("Cutting-edge Hopper architecture for premium clients.")},
-        {QStringLiteral("NVIDIA L40S"), QStringLiteral("48 GB GDDR6"), QStringLiteral("$8.30/hr"), QStringLiteral("High-performance vision and inference GPU.")}
-    };
-}
-
-QVBoxLayout *MainWindow::ensureScrollAreaLayout(QScrollArea *area)
-{
-    if (!area)
-        return nullptr;
-
-    QWidget *container = area->widget();
-    if (!container)
-    {
-        container = new QWidget(area);
-        area->setWidget(container);
-    }
-
-    auto *layout = qobject_cast<QVBoxLayout *>(container->layout());
-    if (!layout)
-    {
-        layout = new QVBoxLayout(container);
-        layout->setContentsMargins(0, 0, 0, 0);
-        layout->setSpacing(12);
-    }
-
-    return layout;
-}
-
-QWidget *MainWindow::createMarketCard(const GPUInfo &info, bool renterList)
-{
-    auto *button = new QPushButton;
-    button->setObjectName(QStringLiteral("gpuCardButton"));
-    button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    button->setMinimumHeight(96);
-    button->setCursor(Qt::PointingHandCursor);
-    button->setFocusPolicy(Qt::NoFocus);
-    button->setStyleSheet(QStringLiteral(
-        "QPushButton#gpuCardButton {"
-        "text-align: left;"
-        "padding: 16px;"
-        "border: 1px solid #444444;"
-        "border-radius: 12px;"
-        "background-color: #2f2f2f;"
-        "color: #ffffff;"
-        "font-size: 15px;"
-        "}"
-        "QPushButton#gpuCardButton:hover {"
-        "background-color: #3a3a3a;"
-        "border-color: #00aaff;"
-        "}"
-    ));
-
-    const QString cardText = tr("%1\n%2 | %3\n%4")
-                                 .arg(info.model, info.vram, info.price, info.description);
-    button->setText(cardText);
-
-    if (renterList)
-    {
-        connect(button, &QPushButton::clicked, this, [this, info]() { handleRenterCardClicked(info); });
-    }
-    else
-    {
-       connect(button, &QPushButton::clicked, this, [this, info]() { handleProviderMarketCardClicked(info); });
-    }
-
-    return button;
-}
-
-void MainWindow::resetDetailPanel()
-{
-    if (!ui)
+    managerIpPort = ui->edit_p_manager->text().trimmed();
+    if (managerIpPort.isEmpty()) {
+        QMessageBox::warning(this, "缺少 manager", "請輸入 node-manager 位址，例如 127.0.0.1:8080");
         return;
-
-    if (ui->lbl_detail_name)
-    {
-        ui->lbl_detail_name->setText(tr("Select a GPU"));
     }
 
-    if (ui->lbl_detail_price)
-    {
-        ui->lbl_detail_price->setText(tr("Choose a GPU from the list to view pricing."));
-    }
+    QUrl url(QString("http://%1/nodes").arg(managerIpPort));
+    QNetworkRequest req(url);
+    auto *reply = nam->get(req);
 
-    if (ui->btn_upload_task)
-    {
-        ui->btn_upload_task->setEnabled(false);
-    }
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        QByteArray body = reply->readAll();
+        int code = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        reply->deleteLater();
 
-    m_hasActiveSelection = false;
+        if (code != 200) {
+            QMessageBox::warning(this, "nodes 失敗",
+                                 QString("HTTP %1\n%2").arg(code).arg(QString::fromUtf8(body)));
+            return;
+        }
+
+        QJsonParseError err{};
+        QJsonDocument doc = QJsonDocument::fromJson(body, &err);
+        if (err.error != QJsonParseError::NoError || !doc.isArray()) {
+            QMessageBox::warning(this, "nodes 格式錯誤", QString::fromUtf8(body));
+            return;
+        }
+
+        clearLayout(ui->vlay_renter_nodes);
+
+        for (auto v : doc.array()) {
+            QString ip = v.toString();
+            auto *btn = new QPushButton(ip, this);
+            btn->setMinimumHeight(48);
+
+            connect(btn, &QPushButton::clicked, this, [this, ip]() {
+                selectedNodeIp = ip;
+                ui->lbl_r_selected_node->setText("已選擇節點：" + ip);
+            });
+
+            ui->vlay_renter_nodes->addWidget(btn);
+        }
+
+        ui->vlay_renter_nodes->addStretch(1);
+    });
 }
 
-void MainWindow::handleRenterCardClicked(const GPUInfo &info)
+// -------------------- HTTP: POST /submit_job --------------------
+void MainWindow::submitJob()
 {
-    if (ui->lbl_detail_name)
-    {
-        ui->lbl_detail_name->setText(info.model);
+    if (selectedNodeIp.isEmpty()) {
+        QMessageBox::warning(this, "未選擇節點", "請先從左側選一個節點。");
+        return;
     }
 
-    if (ui->lbl_detail_price)
-    {
-        ui->lbl_detail_price->setText(tr("%1\n%2 | %3")
-                                           .arg(info.description, info.vram, info.price));
+    QString container = ui->edit_r_container->text().trimmed();
+    QString script = ui->edit_r_script->toPlainText().trimmed();
+    if (container.isEmpty() || script.isEmpty()) {
+        QMessageBox::warning(this, "資料不足", "container / script 不能為空。");
+        return;
     }
 
-    if (ui->btn_upload_task)
-    {
-        ui->btn_upload_task->setEnabled(true);
+    managerIpPort = ui->edit_p_manager->text().trimmed();
+    if (managerIpPort.isEmpty()) {
+        QMessageBox::warning(this, "缺少 manager", "請輸入 node-manager 位址，例如 127.0.0.1:8080");
+        return;
     }
 
-    m_hasActiveSelection = true;
+    QUrl url(QString("http://%1/submit_job").arg(managerIpPort));
+
+    QJsonObject payload{
+        {"target_node", selectedNodeIp},
+        {"container", container},
+        {"script", script}
+    };
+
+    QNetworkRequest req(url);
+    req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+
+    auto *reply = nam->post(req, QJsonDocument(payload).toJson());
+
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        QByteArray body = reply->readAll();
+        int code = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        reply->deleteLater();
+
+        if (code != 200) {
+            ui->text_r_stderr->setPlainText(QString("HTTP %1\n%2")
+                                            .arg(code).arg(QString::fromUtf8(body)));
+            return;
+        }
+
+        QJsonParseError err{};
+        QJsonDocument doc = QJsonDocument::fromJson(body, &err);
+        if (err.error != QJsonParseError::NoError || !doc.isObject()) {
+            ui->text_r_stderr->setPlainText(QString::fromUtf8(body));
+            return;
+        }
+
+        currentJobId = doc.object().value("job_id").toString();
+        if (currentJobId.isEmpty()) {
+            ui->text_r_stderr->setPlainText("沒有拿到 job_id:\n" + QString::fromUtf8(body));
+            return;
+        }
+
+        ui->text_r_stdout->setPlainText("已送出任務,job_id=" + currentJobId + "\n等待執行結果...");
+        ui->text_r_stderr->clear();
+
+        if (!pollTimer->isActive()) {
+            connect(pollTimer, &QTimer::timeout, this, &MainWindow::pollJobStatus);
+            pollTimer->start();
+        }
+    });
 }
 
+// -------------------- HTTP: GET /job_status?id=...&node=... --------------------
+void MainWindow::pollJobStatus()
+{
+    if (currentJobId.isEmpty() || selectedNodeIp.isEmpty() || managerIpPort.isEmpty()) return;
+
+    QUrl url(QString("http://%1/job_status").arg(managerIpPort));
+    QUrlQuery q;
+    q.addQueryItem("id", currentJobId);
+    q.addQueryItem("node", selectedNodeIp);
+    url.setQuery(q);
+
+    QNetworkRequest req(url);
+    auto *reply = nam->get(req);
+
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        QByteArray body = reply->readAll();
+        int code = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        reply->deleteLater();
+
+        if (code == 202) {
+            ui->text_r_stdout->appendPlainText(".");
+            return;
+        }
+
+        if (code == 200) {
+            pollTimer->stop();
+            ui->text_r_stdout->appendPlainText("\n=== JOB FINISHED ===\n" + QString::fromUtf8(body));
+            return;
+        }
+
+        pollTimer->stop();
+        ui->text_r_stderr->setPlainText(QString("job_status HTTP %1\n%2")
+                                        .arg(code).arg(QString::fromUtf8(body)));
+    });
+}
+
+// -------------------- HTTP: POST /register --------------------
+void MainWindow::registerNode()
+{
+    managerIpPort = ui->edit_p_manager->text().trimmed(); 
+    QString nodeIp = ui->edit_p_node_ip->text().trimmed();
+    QString gpuModel = ui->lbl_p_gpu_value->text().trimmed();
+
+    if (managerIpPort.isEmpty() || nodeIp.isEmpty() || gpuModel.isEmpty() || gpuModel == "-") {
+        QMessageBox::warning(this, "資料不足", "請確認 manager、本機 IP、GPU 型號都有值（先點左側主機卡片）。");
+        return;
+    }
+
+    QJsonObject payload{{"ip", nodeIp}, {"gpu_model", gpuModel}};
+
+    QNetworkRequest req(QUrl(QString("http://%1/register").arg(managerIpPort)));
+    req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+
+    auto *reply = nam->post(req, QJsonDocument(payload).toJson());
+    connect(reply, &QNetworkReply::finished, this, [this, reply, nodeIp, gpuModel]() {
+        QByteArray body = reply->readAll();
+        int code = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        reply->deleteLater();
+
+        if (code == 200) {
+            ui->text_p_log->appendPlainText("[INFO] Registered node: " + nodeIp);
+
+            double price = ui->edit_p_price ? ui->edit_p_price->text().toDouble() : 0.0;
+            addMyHostToTop(nodeIp, gpuModel, "-", price, "idle");
+        } else {
+            ui->text_p_log->appendPlainText(QString("[ERROR] register failed HTTP %1: ").arg(code)
+                                            + QString::fromUtf8(body));
+        }
+    });
+}
+
+// -------------------- Provider: host cards --------------------
 void MainWindow::handleProviderCardClicked()
 {
     auto *btn = qobject_cast<QPushButton*>(sender());
@@ -310,12 +249,13 @@ void MainWindow::handleProviderCardClicked()
     double price   = btn->property("price").toDouble();
     QString status = btn->property("status").toString();
 
-    
-
-    qDebug() << "[Provider Card Clicked]"
-             << hostId << gpu << vram << price << status;
-
+    if (ui->lbl_p_host_value)   ui->lbl_p_host_value->setText(hostId);
+    if (ui->lbl_p_gpu_value)    ui->lbl_p_gpu_value->setText(gpu);
+    if (ui->lbl_p_vram_value)   ui->lbl_p_vram_value->setText(vram);
+    if (ui->lbl_p_status_value) ui->lbl_p_status_value->setText(status);
+    if (ui->edit_p_price)       ui->edit_p_price->setText(QString::number(price, 'f', 2));
 }
+
 QPushButton* MainWindow::createProviderCard(const QString& hostId,
                                             const QString& gpu,
                                             const QString& vram,
@@ -323,13 +263,8 @@ QPushButton* MainWindow::createProviderCard(const QString& hostId,
                                             const QString& status)
 {
     auto *btn = new QPushButton(this);
-
     btn->setText(QString("%1\n%2 | %3\n$ %4/hr\n%5")
-        .arg(hostId)
-        .arg(gpu)
-        .arg(vram)
-        .arg(price, 0, 'f', 2)
-        .arg(status));
+                 .arg(hostId).arg(gpu).arg(vram).arg(price, 0, 'f', 2).arg(status));
 
     btn->setProperty("hostId", hostId);
     btn->setProperty("gpu", gpu);
@@ -337,25 +272,49 @@ QPushButton* MainWindow::createProviderCard(const QString& hostId,
     btn->setProperty("price", price);
     btn->setProperty("status", status);
 
-    btn->setMinimumHeight(95);
+    btn->setMinimumHeight(90);
     btn->setStyleSheet(
         "QPushButton{ text-align:left; padding:10px; border:1px solid #ccc; border-radius:12px; }"
         "QPushButton:hover{ border:1px solid #666; }"
     );
 
-    connect(btn, &QPushButton::clicked, this, [this, hostId, gpu, vram, price, status]() {
-        GPUInfo info;
-        info.model = hostId;
-        info.vram = vram;
-        info.price = QString::number(price);
-        info.description = QString("%1 | %2").arg(gpu, status);
-        handleProviderMarketCardClicked(info);
-    });
+    connect(btn, &QPushButton::clicked, this, &MainWindow::handleProviderCardClicked);
     return btn;
 }
 
-void MainWindow::handleProviderMarketCardClicked(const GPUInfo &info)
+void MainWindow::addMyHostToTop(const QString& hostId,
+                                const QString& gpu,
+                                const QString& vram,
+                                double price,
+                                const QString& status)
 {
-    qDebug() << "[Provider Market Card]" << info.model << info.vram << info.price;
-    
+    if (!ui->vlay_provider_cards) return;
+
+    QPushButton *card = createProviderCard(hostId, gpu, vram, price, status);
+    ui->vlay_provider_cards->insertWidget(0, card);
+    card->click();
+}
+
+// -------------------- UI connections --------------------
+void MainWindow::setupConnections()
+{
+    connect(ui->btn_role_renter, &QPushButton::clicked, this, [this]() {
+        ui->stackedWidget->setCurrentIndex(1);
+    });
+    connect(ui->btn_role_provider, &QPushButton::clicked, this, [this]() {
+        ui->stackedWidget->setCurrentIndex(2);
+    });
+
+    connect(ui->btn_back_renter, &QPushButton::clicked, this, [this]() {
+        ui->stackedWidget->setCurrentIndex(0);
+    });
+    connect(ui->btn_back_provider, &QPushButton::clicked, this, [this]() {
+        ui->stackedWidget->setCurrentIndex(0);
+    });
+
+    connect(ui->btn_r_refresh_nodes, &QPushButton::clicked, this, &MainWindow::refreshNodes);
+    connect(ui->btn_r_submit_job, &QPushButton::clicked, this, &MainWindow::submitJob);
+
+    connect(ui->btn_p_register, &QPushButton::clicked, this, &MainWindow::registerNode);
+    connect(ui->btn_p_refresh, &QPushButton::clicked, this, &MainWindow::refreshNodes);
 }

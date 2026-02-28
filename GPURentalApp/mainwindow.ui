@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1156</width>
-    <height>756</height>
+    <width>897</width>
+    <height>762</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,16 +18,16 @@
     <item>
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="currentIndex">
-       <number>1</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="page">
        <widget class="QPushButton" name="btn_role_renter">
         <property name="geometry">
          <rect>
-          <x>80</x>
-          <y>110</y>
-          <width>291</width>
-          <height>421</height>
+          <x>60</x>
+          <y>90</y>
+          <width>381</width>
+          <height>511</height>
          </rect>
         </property>
         <property name="layoutDirection">
@@ -46,10 +46,10 @@
        <widget class="QPushButton" name="btn_role_provider">
         <property name="geometry">
          <rect>
-          <x>400</x>
-          <y>110</y>
-          <width>291</width>
-          <height>421</height>
+          <x>450</x>
+          <y>90</y>
+          <width>361</width>
+          <height>511</height>
          </rect>
         </property>
         <property name="text">
@@ -64,19 +64,19 @@
        <widget class="QWidget" name="horizontalLayoutWidget">
         <property name="geometry">
          <rect>
-          <x>-1</x>
-          <y>9</y>
+          <x>0</x>
+          <y>50</y>
           <width>521</width>
           <height>521</height>
          </rect>
         </property>
         <layout class="QHBoxLayout" name="horizontalLayout">
          <item>
-          <widget class="QScrollArea" name="scrollArea_market">
+          <widget class="QScrollArea" name="sa_renter_nodes">
            <property name="widgetResizable">
             <bool>true</bool>
            </property>
-           <widget class="QWidget" name="scrollAreaWidgetContents">
+           <widget class="QWidget" name="sa_renter_nodes_content">
             <property name="geometry">
              <rect>
               <x>0</x>
@@ -85,80 +85,18 @@
               <height>517</height>
              </rect>
             </property>
+            <widget class="QWidget" name="verticalLayoutWidget_3">
+             <property name="geometry">
+              <rect>
+               <x>0</x>
+               <y>0</y>
+               <width>521</width>
+               <height>521</height>
+              </rect>
+             </property>
+             <layout class="QVBoxLayout" name="vlay_renter_nodes"/>
+            </widget>
            </widget>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-       <widget class="QFrame" name="frame_details">
-        <property name="geometry">
-         <rect>
-          <x>520</x>
-          <y>10</y>
-          <width>281</width>
-          <height>521</height>
-         </rect>
-        </property>
-        <property name="frameShape">
-         <enum>QFrame::Shape::StyledPanel</enum>
-        </property>
-        <property name="frameShadow">
-         <enum>QFrame::Shadow::Raised</enum>
-        </property>
-        <layout class="QVBoxLayout" name="verticalLayout">
-         <item>
-          <widget class="QLabel" name="lbl_detail_name">
-           <property name="text">
-            <string>請選擇想租借的顯卡</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="label">
-           <property name="text">
-            <string>TextLabel</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLineEdit" name="edit_file_path">
-           <property name="text">
-            <string/>
-           </property>
-           <property name="readOnly">
-            <bool>true</bool>
-           </property>
-           <property name="placeholderText">
-            <string>選擇檔案後會顯示路徑</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QProgressBar" name="progress_upload">
-           <property name="value">
-            <number>24</number>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="lbl_eta">
-           <property name="text">
-            <string>預估完成時間</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="lbl_detail_price">
-           <property name="text">
-            <string>-</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="btn_upload_task">
-           <property name="text">
-            <string>上傳任務並租用</string>
-           </property>
           </widget>
          </item>
         </layout>
@@ -166,8 +104,8 @@
        <widget class="QPushButton" name="btn_back_renter">
         <property name="geometry">
          <rect>
-          <x>720</x>
-          <y>550</y>
+          <x>780</x>
+          <y>570</y>
           <width>81</width>
           <height>31</height>
          </rect>
@@ -175,6 +113,140 @@
         <property name="text">
          <string>返回</string>
         </property>
+       </widget>
+       <widget class="QWidget" name="horizontalLayoutWidget_5">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>0</y>
+          <width>521</width>
+          <height>51</height>
+         </rect>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_5">
+         <item>
+          <widget class="QPushButton" name="btn_r_refresh_nodes">
+           <property name="text">
+            <string>刷新</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="lbl_r_manager">
+           <property name="text">
+            <string>manager IP：</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="verticalLayoutWidget_4">
+        <property name="geometry">
+         <rect>
+          <x>519</x>
+          <y>9</y>
+          <width>341</width>
+          <height>561</height>
+         </rect>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout">
+         <item>
+          <widget class="QGroupBox" name="gb_r_submit">
+           <property name="title">
+            <string>送出任務</string>
+           </property>
+           <widget class="QLabel" name="lbl_r_selected_node">
+            <property name="geometry">
+             <rect>
+              <x>20</x>
+              <y>30</y>
+              <width>241</width>
+              <height>16</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>尚未選擇節點</string>
+            </property>
+           </widget>
+           <widget class="QLineEdit" name="edit_r_container">
+            <property name="geometry">
+             <rect>
+              <x>20</x>
+              <y>60</y>
+              <width>241</width>
+              <height>21</height>
+             </rect>
+            </property>
+           </widget>
+           <widget class="QPlainTextEdit" name="edit_r_script">
+            <property name="geometry">
+             <rect>
+              <x>20</x>
+              <y>90</y>
+              <width>241</width>
+              <height>31</height>
+             </rect>
+            </property>
+            <property name="plainText">
+             <string>rocm-smi</string>
+            </property>
+           </widget>
+           <widget class="QPushButton" name="btn_r_submit_job">
+            <property name="geometry">
+             <rect>
+              <x>250</x>
+              <y>130</y>
+              <width>75</width>
+              <height>23</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>送出任務</string>
+            </property>
+           </widget>
+          </widget>
+         </item>
+         <item>
+          <widget class="QGroupBox" name="gb_r_stdout">
+           <property name="title">
+            <string>STDOUT</string>
+           </property>
+           <widget class="QPlainTextEdit" name="text_r_stdout">
+            <property name="geometry">
+             <rect>
+              <x>10</x>
+              <y>20</y>
+              <width>321</width>
+              <height>151</height>
+             </rect>
+            </property>
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </widget>
+         </item>
+         <item>
+          <widget class="QGroupBox" name="gb_r_stderr">
+           <property name="title">
+            <string>STDERR</string>
+           </property>
+           <widget class="QPlainTextEdit" name="text_r_stderr">
+            <property name="geometry">
+             <rect>
+              <x>10</x>
+              <y>20</y>
+              <width>321</width>
+              <height>151</height>
+             </rect>
+            </property>
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </widget>
       <widget class="QWidget" name="page_3">
@@ -184,7 +256,7 @@
           <x>-1</x>
           <y>9</y>
           <width>521</width>
-          <height>521</height>
+          <height>591</height>
          </rect>
         </property>
         <layout class="QHBoxLayout" name="horizontalLayout_3">
@@ -199,7 +271,7 @@
               <x>9</x>
               <y>19</y>
               <width>511</width>
-              <height>501</height>
+              <height>571</height>
              </rect>
             </property>
             <property name="widgetResizable">
@@ -211,7 +283,7 @@
                <x>0</x>
                <y>0</y>
                <width>509</width>
-               <height>499</height>
+               <height>569</height>
               </rect>
              </property>
              <widget class="QWidget" name="verticalLayoutWidget">
@@ -220,7 +292,7 @@
                 <x>-1</x>
                 <y>-1</y>
                 <width>511</width>
-                <height>501</height>
+                <height>571</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="vlay_provider_cards">
@@ -250,8 +322,8 @@
          <rect>
           <x>519</x>
           <y>9</y>
-          <width>281</width>
-          <height>521</height>
+          <width>351</width>
+          <height>591</height>
          </rect>
         </property>
         <layout class="QHBoxLayout" name="horizontalLayout_4">
@@ -262,8 +334,8 @@
              <rect>
               <x>-1</x>
               <y>-1</y>
-              <width>291</width>
-              <height>521</height>
+              <width>351</width>
+              <height>591</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="vlay_provider_right">
@@ -273,9 +345,9 @@
                 <property name="geometry">
                  <rect>
                   <x>10</x>
-                  <y>20</y>
-                  <width>261</width>
-                  <height>111</height>
+                  <y>30</y>
+                  <width>321</width>
+                  <height>91</height>
                  </rect>
                 </property>
                 <layout class="QHBoxLayout" name="hlay_provider_topbar">
@@ -332,30 +404,30 @@
                 <property name="geometry">
                  <rect>
                   <x>9</x>
-                  <y>169</y>
-                  <width>261</width>
-                  <height>341</height>
+                  <y>119</y>
+                  <width>341</width>
+                  <height>351</height>
                  </rect>
                 </property>
                 <property name="title">
-                 <string>GroupBox</string>
+                 <string>主機資訊</string>
                 </property>
                 <widget class="QWidget" name="w_p_detail" native="true">
                  <property name="geometry">
                   <rect>
                    <x>-1</x>
                    <y>9</y>
-                   <width>261</width>
-                   <height>331</height>
+                   <width>341</width>
+                   <height>341</height>
                   </rect>
                  </property>
                  <widget class="QWidget" name="layoutWidget">
                   <property name="geometry">
                    <rect>
-                    <x>30</x>
+                    <x>10</x>
                     <y>10</y>
-                    <width>169</width>
-                    <height>286</height>
+                    <width>331</width>
+                    <height>321</height>
                    </rect>
                   </property>
                   <layout class="QGridLayout" name="gridLayout">
@@ -363,22 +435,6 @@
                     <widget class="QLabel" name="label_2">
                      <property name="text">
                       <string>主機名稱：</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item row="0" column="1">
-                    <widget class="QLabel" name="lbl_P_host_value">
-                     <property name="minimumSize">
-                      <size>
-                       <width>100</width>
-                       <height>40</height>
-                      </size>
-                     </property>
-                     <property name="frameShape">
-                      <enum>QFrame::Shape::StyledPanel</enum>
-                     </property>
-                     <property name="text">
-                      <string>-</string>
                      </property>
                     </widget>
                    </item>
@@ -468,8 +524,102 @@
                      </property>
                     </widget>
                    </item>
+                   <item row="0" column="1">
+                    <widget class="QLabel" name="lbl_p_host_value">
+                     <property name="minimumSize">
+                      <size>
+                       <width>100</width>
+                       <height>40</height>
+                      </size>
+                     </property>
+                     <property name="frameShape">
+                      <enum>QFrame::Shape::StyledPanel</enum>
+                     </property>
+                     <property name="text">
+                      <string/>
+                     </property>
+                    </widget>
+                   </item>
                   </layout>
                  </widget>
+                </widget>
+               </widget>
+               <widget class="QGroupBox" name="gb_p_register">
+                <property name="geometry">
+                 <rect>
+                  <x>10</x>
+                  <y>470</y>
+                  <width>341</width>
+                  <height>71</height>
+                 </rect>
+                </property>
+                <property name="title">
+                 <string>註冊節點</string>
+                </property>
+                <widget class="QPushButton" name="btn_p_register">
+                 <property name="geometry">
+                  <rect>
+                   <x>260</x>
+                   <y>40</y>
+                   <width>75</width>
+                   <height>23</height>
+                  </rect>
+                 </property>
+                 <property name="text">
+                  <string>註冊</string>
+                 </property>
+                </widget>
+                <widget class="QLineEdit" name="edit_p_manager">
+                 <property name="geometry">
+                  <rect>
+                   <x>10</x>
+                   <y>20</y>
+                   <width>113</width>
+                   <height>21</height>
+                  </rect>
+                 </property>
+                 <property name="placeholderText">
+                  <string>127.0.0.1:8080</string>
+                 </property>
+                </widget>
+                <widget class="QLineEdit" name="edit_p_node_ip">
+                 <property name="geometry">
+                  <rect>
+                   <x>130</x>
+                   <y>20</y>
+                   <width>131</width>
+                   <height>21</height>
+                  </rect>
+                 </property>
+                 <property name="placeholderText">
+                  <string>本機 IP</string>
+                 </property>
+                </widget>
+               </widget>
+               <widget class="QGroupBox" name="gb_p_log">
+                <property name="geometry">
+                 <rect>
+                  <x>9</x>
+                  <y>540</y>
+                  <width>341</width>
+                  <height>51</height>
+                 </rect>
+                </property>
+                <property name="title">
+                 <string>節點日誌</string>
+                </property>
+                <widget class="QPlainTextEdit" name="text_p_log">
+                 <property name="geometry">
+                  <rect>
+                   <x>10</x>
+                   <y>20</y>
+                   <width>221</width>
+                   <height>21</height>
+                  </rect>
+                 </property>
+                 <property name="readOnly">
+                  <bool>true</bool>
+                 </property>
                 </widget>
                </widget>
               </widget>
@@ -490,7 +640,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1156</width>
+     <width>897</width>
      <height>21</height>
     </rect>
    </property>
