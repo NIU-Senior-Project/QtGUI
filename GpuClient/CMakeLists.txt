@@ -8,6 +8,7 @@ set(CMAKE_AUTORCC ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets Network LinguistTools)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Network LinguistTools)
@@ -20,6 +21,26 @@ set(PROJECT_SOURCES
         mainwindow.cpp
         mainwindow.h
         mainwindow.ui
+
+        homewindow.h
+        homewindow.cpp
+        homewindow.ui
+
+        rentwindow.h
+        rentwindow.cpp
+        rentwindow.ui
+
+        providewindow.h
+        providewindow.cpp
+        providewindow.ui
+
+        missionuploadwindow.h
+        missionuploadwindow.cpp
+        missionuploadwindow.ui
+
+        resources.qrc
+        glass.qss
+
         machine.h
         machineprovider_tcp.cpp
         machineprovider_http.cpp
@@ -33,6 +54,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(GpuClient
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
+        homewindow.h homewindow.cpp homewindow.ui
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET GpuClient APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR

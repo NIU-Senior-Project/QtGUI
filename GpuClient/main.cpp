@@ -3,10 +3,21 @@
 #include <QApplication>
 #include <QLocale>
 #include <QTranslator>
+#include <QFile>
+
+static void applyGlassTheme(QApplication &app)
+{
+    QFile f(":/glass.qss");   // ✅ 走 qrc
+    if (f.open(QFile::ReadOnly)) {
+        app.setStyleSheet(QString::fromUtf8(f.readAll()));
+    }
+}
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+    
+    applyGlassTheme(a);
 
     QTranslator translator;
     const QStringList uiLanguages = QLocale::system().uiLanguages();

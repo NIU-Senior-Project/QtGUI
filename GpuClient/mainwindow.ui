@@ -4,37 +4,79 @@
  <widget class="QMainWindow" name="MainWindow">
   <property name="geometry">
    <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>800</width>
-    <height>600</height>
+    <x>0</x><y>0</y><width>1200</width><height>720</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>Borrow GPU for me</string>
   </property>
+
   <widget class="QWidget" name="centralwidget">
-   <widget class="QTableWidget" name="tableWidget">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>20</y>
-      <width>691</width>
-      <height>511</height>
-     </rect>
-    </property>
-   </widget>
+   <layout class="QVBoxLayout" name="rootLayout">
+    <property name="leftMargin"><number>0</number></property>
+    <property name="topMargin"><number>0</number></property>
+    <property name="rightMargin"><number>0</number></property>
+    <property name="bottomMargin"><number>0</number></property>
+    <property name="spacing"><number>0</number></property>
+
+    <item>
+     <widget class="QStackedWidget" name="stack">
+      <property name="currentIndex"><number>0</number></property>
+
+      <widget class="QWidget" name="pageHome">
+       <layout class="QVBoxLayout" name="layoutHome">
+        <property name="leftMargin"><number>0</number></property>
+        <property name="topMargin"><number>0</number></property>
+        <property name="rightMargin"><number>0</number></property>
+        <property name="bottomMargin"><number>0</number></property>
+       </layout>
+      </widget>
+
+      <widget class="QWidget" name="pageRent">
+       <layout class="QVBoxLayout" name="layoutRent">
+        <property name="leftMargin"><number>0</number></property>
+        <property name="topMargin"><number>0</number></property>
+        <property name="rightMargin"><number>0</number></property>
+        <property name="bottomMargin"><number>0</number></property>
+       </layout>
+      </widget>
+
+      <widget class="QWidget" name="pageProvide">
+       <layout class="QVBoxLayout" name="layoutProvide">
+        <property name="leftMargin"><number>0</number></property>
+        <property name="topMargin"><number>0</number></property>
+        <property name="rightMargin"><number>0</number></property>
+        <property name="bottomMargin"><number>0</number></property>
+       </layout>
+      </widget>
+
+      <widget class="QWidget" name="pageMission">
+       <layout class="QVBoxLayout" name="layoutMission">
+        <property name="leftMargin"><number>0</number></property>
+        <property name="topMargin"><number>0</number></property>
+        <property name="rightMargin"><number>0</number></property>
+        <property name="bottomMargin"><number>0</number></property>
+       </layout>
+      </widget>
+
+      <widget class="QWidget" name="pageDebug">
+       <layout class="QVBoxLayout" name="layoutDebug">
+        <property name="leftMargin"><number>16</number></property>
+        <property name="topMargin"><number>16</number></property>
+        <property name="rightMargin"><number>16</number></property>
+        <property name="bottomMargin"><number>16</number></property>
+
+        <item>
+         <widget class="QTableWidget" name="tableWidget"/>
+        </item>
+       </layout>
+      </widget>
+
+     </widget>
+    </item>
+   </layout>
   </widget>
-  <widget class="QMenuBar" name="menubar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>800</width>
-     <height>21</height>
-    </rect>
-   </property>
-  </widget>
+
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
  <resources/>

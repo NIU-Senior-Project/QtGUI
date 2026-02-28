@@ -1,0 +1,132 @@
+/* glass.qss - Blue/White Glass Theme */
+
+QWidget {
+  font-family: "Inter", "Noto Sans", "PingFang TC", "Microsoft JhengHei";
+  font-size: 14px;
+}
+
+QMainWindow, QWidget#centralwidget {
+  background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+    stop:0 rgba(235, 245, 255, 255),
+    stop:1 rgba(248, 252, 255, 255)
+  );
+  color: #0b1220;
+}
+
+/* Top bars + panels (glass) */
+QFrame#topBar,
+QFrame#glassPanel,
+QFrame#machineInfoCard,
+QFrame#uploadPanel {
+  background: rgba(255, 255, 255, 170);
+  border: 1px solid rgba(90, 170, 255, 110);
+  border-radius: 18px;
+}
+
+/* Home cards */
+QFrame#cardRent,
+QFrame#cardProvide,
+QFrame[name^="machineCard_"] {
+  background: rgba(255, 255, 255, 155);
+  border: 1px solid rgba(90, 170, 255, 100);
+  border-radius: 22px;
+}
+
+/* Logo circle */
+QLabel#logoMark {
+  background: rgba(255, 255, 255, 180);
+  border: 1px solid rgba(90, 170, 255, 160);
+  border-radius: 20px;
+  font-size: 18px;
+}
+
+/* Titles */
+QLabel#brandTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0b2a5a;
+}
+
+QLabel#pageTitle {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0b2a5a;
+}
+
+QLabel#rentTitle, QLabel#provideTitle,
+QLabel#formTitle, QLabel#infoTitle, QLabel#uploadTitle {
+  font-size: 26px;
+  font-weight: 800;
+  color: #0b2a5a;
+}
+
+QLabel#rentDesc, QLabel#provideDesc,
+QLabel#uploadDesc, QLabel#infoHint, QLabel#hintLabel {
+  color: rgba(11, 18, 32, 170);
+}
+
+/* Inputs */
+QLineEdit {
+  background: rgba(255, 255, 255, 200);
+  border: 1px solid rgba(90, 170, 255, 120);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+QLineEdit:focus {
+  border: 2px solid rgba(44, 140, 255, 190);
+}
+
+/* Make form labels readable */
+QFrame#glassPanel QLabel {
+  color: #0b2a5a;
+  font-weight: 700;
+}
+
+/* Ensure input text is visible */
+QLineEdit {
+  color: #0b1220;
+}
+
+/* Buttons */
+QPushButton {
+  background: rgba(44, 140, 255, 220);
+  color: white;
+  border: 1px solid rgba(44, 140, 255, 255);
+  border-radius: 14px;
+  padding: 10px 14px;
+  font-weight: 700;
+}
+
+QPushButton:hover {
+  background: rgba(44, 140, 255, 245);
+}
+
+QPushButton:pressed {
+  background: rgba(20, 110, 230, 255);
+}
+
+/* Secondary button look (optional) */
+QPushButton#btnSettings, QPushButton#btnRefresh {
+  background: rgba(255, 255, 255, 200);
+  color: #0b2a5a;
+  border: 1px solid rgba(90, 170, 255, 170);
+}
+
+QPushButton#btnSettings:hover, QPushButton#btnRefresh:hover {
+  background: rgba(255, 255, 255, 230);
+}
+
+/* Rent scroll area background fix (mac) */
+QScrollArea, QScrollArea QWidget, QScrollArea > QWidget > QWidget {
+  background: transparent;
+  border: none;
+}
+
+QWidget#scrollWidget {
+  background: transparent;
+}
+
+QFrame[name^="machineCard_"] {
+  min-height: 150px;
+}

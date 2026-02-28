@@ -1,0 +1,9 @@
+<RCC>
+  <qresource prefix="/">
+    <file>glass.qss</file>
+  </qresource>
+
+  <qresource prefix="/">
+    <file>assets/logo.png</file>
+  </qresource>
+</RCC>
