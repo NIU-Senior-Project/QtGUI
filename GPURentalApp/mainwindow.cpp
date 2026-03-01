@@ -28,7 +28,13 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-
+    ui->edit_p_manager->setText("127.0.0.1:8080");
+    ui->vlay_provider_cards->insertWidget(0, createProviderCard("B", "RTX 4070", "12GB", 35.0, "idle")); 
+    ui->vlay_provider_cards->insertWidget(0, createProviderCard("C", "RTX 3080", "10GB", 28.0, "idle"));
+    auto *first = qobject_cast<QPushButton*>(ui->vlay_provider_cards->itemAt(0)->widget());
+    if (first) first->click();
+    
+    connect(pollTimer, &QTimer::timeout, this, &MainWindow::pollJobStatus);
     nam = new QNetworkAccessManager(this);
     pollTimer = new QTimer(this);
     pollTimer->setInterval(2000);
@@ -39,7 +45,6 @@ MainWindow::MainWindow(QWidget *parent)
     }
 
     ui->stackedWidget->setCurrentIndex(0);
-
     setupConnections();
 }
 
@@ -52,6 +57,7 @@ MainWindow::~MainWindow()
 void MainWindow::refreshNodes()
 {
     managerIpPort = ui->edit_p_manager->text().trimmed();
+
     if (managerIpPort.isEmpty()) {
         QMessageBox::warning(this, "缺少 manager", "請輸入 node-manager 位址，例如 127.0.0.1:8080");
         return;
@@ -62,9 +68,17 @@ void MainWindow::refreshNodes()
     auto *reply = nam->get(req);
 
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        if (reply->error() != QNetworkReply::NoError) {
+        QMessageBox::warning(this, "連線失敗", reply->errorString());
+        reply->deleteLater();
+        return;
+        } 
         QByteArray body = reply->readAll();
         int code = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         reply->deleteLater();
+
+        qDebug() << "HTTP /nodes status =" << code;
+        qDebug() << "HTTP /nodes body =" << body;  
 
         if (code != 200) {
             QMessageBox::warning(this, "nodes 失敗",
@@ -133,6 +147,11 @@ void MainWindow::submitJob()
     auto *reply = nam->post(req, QJsonDocument(payload).toJson());
 
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        if (reply->error() != QNetworkReply::NoError) {
+        QMessageBox::warning(this, "連線失敗", reply->errorString());
+        reply->deleteLater();
+        return;
+        }
         QByteArray body = reply->readAll();
         int code = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         reply->deleteLater();
@@ -160,7 +179,6 @@ void MainWindow::submitJob()
         ui->text_r_stderr->clear();
 
         if (!pollTimer->isActive()) {
-            connect(pollTimer, &QTimer::timeout, this, &MainWindow::pollJobStatus);
             pollTimer->start();
         }
     });
@@ -181,6 +199,11 @@ void MainWindow::pollJobStatus()
     auto *reply = nam->get(req);
 
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        if (reply->error() != QNetworkReply::NoError) {
+        QMessageBox::warning(this, "連線失敗", reply->errorString());
+        reply->deleteLater();
+        return;
+       }
         QByteArray body = reply->readAll();
         int code = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         reply->deleteLater();
@@ -221,6 +244,11 @@ void MainWindow::registerNode()
 
     auto *reply = nam->post(req, QJsonDocument(payload).toJson());
     connect(reply, &QNetworkReply::finished, this, [this, reply, nodeIp, gpuModel]() {
+        if (reply->error() != QNetworkReply::NoError) {
+        QMessageBox::warning(this, "連線失敗", reply->errorString());
+        reply->deleteLater();
+        return;
+        }
         QByteArray body = reply->readAll();
         int code = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         reply->deleteLater();
@@ -300,6 +328,7 @@ void MainWindow::setupConnections()
 {
     connect(ui->btn_role_renter, &QPushButton::clicked, this, [this]() {
         ui->stackedWidget->setCurrentIndex(1);
+        refreshNodes();
     });
     connect(ui->btn_role_provider, &QPushButton::clicked, this, [this]() {
         ui->stackedWidget->setCurrentIndex(2);
