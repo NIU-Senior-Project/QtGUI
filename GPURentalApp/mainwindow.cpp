@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
 
+#include <QUuid>
 #include <QDebug>
 #include <QMessageBox>
 #include <QPushButton>
@@ -128,15 +129,17 @@ void MainWindow::submitJob()
         return;
     }
 
-    managerIpPort = ui->edit_p_manager->text().trimmed();
+    managerIpPort = ui->edit_p_manager->text().trimmed(); 
     if (managerIpPort.isEmpty()) {
-        QMessageBox::warning(this, "缺少 manager", "請輸入 node-manager 位址，例如 127.0.0.1:8080");
+        QMessageBox::warning(this, "缺少 manager", "請輸入 node-manager 位址，例如 203.145.206.210:8080");
         return;
     }
+    currentJobId = QUuid::createUuid().toString(QUuid::WithoutBraces);
 
     QUrl url(QString("http://%1/submit_job").arg(managerIpPort));
 
     QJsonObject payload{
+        {"job_id", currentJobId},      
         {"target_node", selectedNodeIp},
         {"container", container},
         {"script", script}
@@ -149,39 +152,22 @@ void MainWindow::submitJob()
 
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
         if (reply->error() != QNetworkReply::NoError) {
-        QMessageBox::warning(this, "連線失敗", reply->errorString());
-        reply->deleteLater();
-        return;
+            ui->text_r_stderr->setPlainText(reply->errorString());
+            reply->deleteLater();
+            return;
         }
+
         QByteArray body = reply->readAll();
         int code = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         reply->deleteLater();
 
-        if (code != 200) {
-            ui->text_r_stderr->setPlainText(QString("HTTP %1\n%2")
-                                            .arg(code).arg(QString::fromUtf8(body)));
-            return;
-        }
-
-        QJsonParseError err{};
-        QJsonDocument doc = QJsonDocument::fromJson(body, &err);
-        if (err.error != QJsonParseError::NoError || !doc.isObject()) {
-            ui->text_r_stderr->setPlainText(QString::fromUtf8(body));
-            return;
-        }
-
-        currentJobId = doc.object().value("job_id").toString();
-        if (currentJobId.isEmpty()) {
-            ui->text_r_stderr->setPlainText("沒有拿到 job_id:\n" + QString::fromUtf8(body));
-            return;
-        }
-
-        ui->text_r_stdout->setPlainText("已送出任務,job_id=" + currentJobId + "\n等待執行結果...");
+        ui->text_r_stdout->setPlainText(
+            "已送出任務\njob_id=" + currentJobId + "\n"
+            "manager reply:\n" + QString::fromUtf8(body)
+        );
         ui->text_r_stderr->clear();
 
-        if (!pollTimer->isActive()) {
-            pollTimer->start();
-        }
+        if (!pollTimer->isActive()) pollTimer->start();
     });
 }
 

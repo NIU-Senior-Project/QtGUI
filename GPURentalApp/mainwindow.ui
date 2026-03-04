@@ -591,6 +591,9 @@
                    <height>21</height>
                   </rect>
                  </property>
+                 <property name="text">
+                  <string>203.145.206.210:8080</string>
+                 </property>
                  <property name="placeholderText">
                   <string>203.145.206.210:8080</string>
                  </property>
