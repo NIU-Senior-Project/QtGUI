@@ -28,7 +28,7 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    ui->edit_p_manager->setText("127.0.0.1:8080");
+    ui->edit_p_manager->setText("203.145.206.210:8080");
 
     nam = new QNetworkAccessManager(this);
     pollTimer = new QTimer(this);
@@ -348,7 +348,7 @@ void MainWindow::applyPrice()
         .arg(vram)
         .arg(newPrice, 0, 'f', 2)
         .arg(status));
-        
+
     if (ui->text_p_log) {
         ui->text_p_log->appendPlainText(QString("[INFO] Updated price: %1 -> %2")
             .arg(hostId)
