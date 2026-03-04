@@ -27,6 +27,7 @@ private slots:
     void submitJob();
     void pollJobStatus();
     void registerNode();
+    void applyPrice();
 
 private:
     void setupConnections();
@@ -45,6 +46,7 @@ private:
 private:
     Ui::MainWindow *ui = nullptr;
 
+    QPushButton *currentProviderButton = nullptr;
     QNetworkAccessManager *nam = nullptr;
     QTimer *pollTimer = nullptr;
     QString managerIpPort;       

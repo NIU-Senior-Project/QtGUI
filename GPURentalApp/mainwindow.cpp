@@ -29,15 +29,16 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     ui->edit_p_manager->setText("127.0.0.1:8080");
+
+    nam = new QNetworkAccessManager(this);
+    pollTimer = new QTimer(this);
+    pollTimer->setInterval(2000);
+    connect(pollTimer, &QTimer::timeout, this, &MainWindow::pollJobStatus);
+
     ui->vlay_provider_cards->insertWidget(0, createProviderCard("B", "RTX 4070", "12GB", 35.0, "idle")); 
     ui->vlay_provider_cards->insertWidget(0, createProviderCard("C", "RTX 3080", "10GB", 28.0, "idle"));
     auto *first = qobject_cast<QPushButton*>(ui->vlay_provider_cards->itemAt(0)->widget());
     if (first) first->click();
-    
-    connect(pollTimer, &QTimer::timeout, this, &MainWindow::pollJobStatus);
-    nam = new QNetworkAccessManager(this);
-    pollTimer = new QTimer(this);
-    pollTimer->setInterval(2000);
 
     if (ui->edit_p_price) {
         ui->edit_p_price->setValidator(new QDoubleValidator(0, 999999, 2, ui->edit_p_price));
@@ -270,18 +271,26 @@ void MainWindow::handleProviderCardClicked()
 {
     auto *btn = qobject_cast<QPushButton*>(sender());
     if (!btn) return;
-
+    currentProviderButton = btn; 
+     
     QString hostId = btn->property("hostId").toString();
     QString gpu    = btn->property("gpu").toString();
     QString vram   = btn->property("vram").toString();
     double price   = btn->property("price").toDouble();
     QString status = btn->property("status").toString();
+    bool owned     = btn->property("owned").toBool();
+
+    if (ui->edit_p_price) {
+        ui->edit_p_price->setReadOnly(!owned);
+        ui->edit_p_price->setEnabled(owned);
+        ui->edit_p_price->setToolTip(owned ? "" : "只有自己上傳的主機才能修改價格");
+        ui->edit_p_price->setText(QString::number(price, 'f', 2));
+    }
 
     if (ui->lbl_p_host_value)   ui->lbl_p_host_value->setText(hostId);
     if (ui->lbl_p_gpu_value)    ui->lbl_p_gpu_value->setText(gpu);
     if (ui->lbl_p_vram_value)   ui->lbl_p_vram_value->setText(vram);
     if (ui->lbl_p_status_value) ui->lbl_p_status_value->setText(status);
-    if (ui->edit_p_price)       ui->edit_p_price->setText(QString::number(price, 'f', 2));
 }
 
 QPushButton* MainWindow::createProviderCard(const QString& hostId,
@@ -299,15 +308,52 @@ QPushButton* MainWindow::createProviderCard(const QString& hostId,
     btn->setProperty("vram", vram);
     btn->setProperty("price", price);
     btn->setProperty("status", status);
+    btn->setProperty("owned", true);
 
     btn->setMinimumHeight(90);
     btn->setStyleSheet(
         "QPushButton{ text-align:left; padding:10px; border:1px solid #ccc; border-radius:12px; }"
         "QPushButton:hover{ border:1px solid #666; }"
     );
-
+    
     connect(btn, &QPushButton::clicked, this, &MainWindow::handleProviderCardClicked);
     return btn;
+}
+//-----按下按鈕才會套用新價格----
+void MainWindow::applyPrice()
+{
+    if (!currentProviderButton) {
+        QMessageBox::warning(this, "未選擇主機", "請先點左側主機卡片，再修改價格。");
+        return;
+    }
+    if (!currentProviderButton->property("owned").toBool()) {
+        QMessageBox::warning(this, "不可修改", "只有自己上傳的主機才能修改價格。");
+        return;
+    }
+    bool ok = false;
+    double newPrice = ui->edit_p_price->text().toDouble(&ok);
+    if (!ok || newPrice < 0) {
+        QMessageBox::warning(this, "價格格式錯誤", "請輸入有效的數字價格。");
+        return;
+    }
+    currentProviderButton->setProperty("price", newPrice);
+    QString hostId = currentProviderButton->property("hostId").toString();
+    QString gpu    = currentProviderButton->property("gpu").toString();
+    QString vram   = currentProviderButton->property("vram").toString();
+    QString status = currentProviderButton->property("status").toString();
+
+    currentProviderButton->setText(QString("%1\n%2 | %3\n$ %4/hr\n%5")
+        .arg(hostId)
+        .arg(gpu)
+        .arg(vram)
+        .arg(newPrice, 0, 'f', 2)
+        .arg(status));
+        
+    if (ui->text_p_log) {
+        ui->text_p_log->appendPlainText(QString("[INFO] Updated price: %1 -> %2")
+            .arg(hostId)
+            .arg(newPrice, 0, 'f', 2));
+    }
 }
 
 void MainWindow::addMyHostToTop(const QString& hostId,
@@ -343,7 +389,7 @@ void MainWindow::setupConnections()
 
     connect(ui->btn_r_refresh_nodes, &QPushButton::clicked, this, &MainWindow::refreshNodes);
     connect(ui->btn_r_submit_job, &QPushButton::clicked, this, &MainWindow::submitJob);
-
     connect(ui->btn_p_register, &QPushButton::clicked, this, &MainWindow::registerNode);
     connect(ui->btn_p_refresh, &QPushButton::clicked, this, &MainWindow::refreshNodes);
+    connect(ui->btn_p_apply_price, &QPushButton::clicked, this, &MainWindow::applyPrice);
 }
