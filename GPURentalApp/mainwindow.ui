@@ -18,7 +18,7 @@
     <item>
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="currentIndex">
-       <number>2</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="page">
        <widget class="QPushButton" name="btn_role_renter">
@@ -105,7 +105,7 @@
         <property name="geometry">
          <rect>
           <x>780</x>
-          <y>570</y>
+          <y>580</y>
           <width>81</width>
           <height>31</height>
          </rect>
@@ -177,6 +177,12 @@
               <height>21</height>
              </rect>
             </property>
+            <property name="text">
+             <string>docker.io/rocm/dev-ubuntu-24.04:7.2</string>
+            </property>
+            <property name="placeholderText">
+             <string>docker.io/rocm/dev-ubuntu-24.04:7.2</string>
+            </property>
            </widget>
            <widget class="QPlainTextEdit" name="edit_r_script">
             <property name="geometry">
@@ -188,7 +194,7 @@
              </rect>
             </property>
             <property name="plainText">
-             <string>rocm-smi</string>
+             <string>nvidia-smi</string>
             </property>
            </widget>
            <widget class="QPushButton" name="btn_r_submit_job">
@@ -592,10 +598,10 @@
                   </rect>
                  </property>
                  <property name="text">
-                  <string>203.145.206.210:8080</string>
+                  <string>100.99.159.99:8080</string>
                  </property>
                  <property name="placeholderText">
-                  <string>203.145.206.210:8080</string>
+                  <string>100.99.159.99:8080</string>
                  </property>
                 </widget>
                 <widget class="QLineEdit" name="edit_p_node_ip">

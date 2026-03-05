@@ -14,6 +14,7 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QUrlQuery>
+#include <QRegularExpression>
 
 static void clearLayout(QLayout *layout)
 {
@@ -23,13 +24,28 @@ static void clearLayout(QLayout *layout)
         delete it;
     }
 }
+static QString extractJobIdFromText(const QString& s) {
+            QRegularExpression re1("\"job_id\"\\s*:\\s*\"([^\"]+)\"");
+            auto m1 = re1.match(s);
+            if (m1.hasMatch()) return m1.captured(1);
+
+            QRegularExpression re2("job_id\\s*=\\s*([A-Za-z0-9\\-]+)");
+            auto m2 = re2.match(s);
+            if (m2.hasMatch()) return m2.captured(1);
+
+            return {};
+}
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    ui->edit_p_manager->setText("203.145.206.210:8080");
+    ui->edit_r_container->setText("docker.io/rocm/dev-ubuntu-24.04:7.2");
+    ui->edit_r_script->setPlainText("nvidia-smi");
+    ui->edit_p_manager->setText("100.99.159.99:8080");
+    ui->sa_renter_nodes->setWidgetResizable(true);
+    ui->sa_provider_market->setWidgetResizable(true);
 
     nam = new QNetworkAccessManager(this);
     pollTimer = new QTimer(this);
@@ -59,9 +75,8 @@ MainWindow::~MainWindow()
 void MainWindow::refreshNodes()
 {
     managerIpPort = ui->edit_p_manager->text().trimmed();
-
     if (managerIpPort.isEmpty()) {
-        QMessageBox::warning(this, "缺少 manager", "請輸入 node-manager 位址，例如 127.0.0.1:8080");
+        QMessageBox::warning(this, "缺少 manager", "請輸入 210 的 tailscaleIP:8080");
         return;
     }
 
@@ -71,16 +86,17 @@ void MainWindow::refreshNodes()
 
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
         if (reply->error() != QNetworkReply::NoError) {
-        QMessageBox::warning(this, "連線失敗", reply->errorString());
-        reply->deleteLater();
-        return;
-        } 
+            QMessageBox::warning(this, "連線失敗", reply->errorString());
+            reply->deleteLater();
+            return;
+        }
+
         QByteArray body = reply->readAll();
         int code = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         reply->deleteLater();
 
         qDebug() << "HTTP /nodes status =" << code;
-        qDebug() << "HTTP /nodes body =" << body;  
+        qDebug() << "HTTP /nodes body =" << body;
 
         if (code != 200) {
             QMessageBox::warning(this, "nodes 失敗",
@@ -97,9 +113,12 @@ void MainWindow::refreshNodes()
 
         clearLayout(ui->vlay_renter_nodes);
 
-        for (auto v : doc.array()) {
+        const auto arr = doc.array();
+        qDebug() << "nodes count =" << arr.size();
+
+        for (auto v : arr) {
             QString ip = v.toString();
-            auto *btn = new QPushButton(ip, this);
+            auto *btn = new QPushButton(ip, ui->sa_renter_nodes_content);
             btn->setMinimumHeight(48);
 
             connect(btn, &QPushButton::clicked, this, [this, ip]() {
@@ -109,8 +128,10 @@ void MainWindow::refreshNodes()
 
             ui->vlay_renter_nodes->addWidget(btn);
         }
-
         ui->vlay_renter_nodes->addStretch(1);
+
+        ui->sa_renter_nodes_content->adjustSize();
+        ui->sa_renter_nodes->viewport()->update();
     });
 }
 
@@ -134,12 +155,10 @@ void MainWindow::submitJob()
         QMessageBox::warning(this, "缺少 manager", "請輸入 node-manager 位址，例如 203.145.206.210:8080");
         return;
     }
-    currentJobId = QUuid::createUuid().toString(QUuid::WithoutBraces);
 
     QUrl url(QString("http://%1/submit_job").arg(managerIpPort));
 
-    QJsonObject payload{
-        {"job_id", currentJobId},      
+    QJsonObject payload{    
         {"target_node", selectedNodeIp},
         {"container", container},
         {"script", script}
@@ -151,22 +170,33 @@ void MainWindow::submitJob()
     auto *reply = nam->post(req, QJsonDocument(payload).toJson());
 
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-        if (reply->error() != QNetworkReply::NoError) {
-            ui->text_r_stderr->setPlainText(reply->errorString());
-            reply->deleteLater();
+        QByteArray body = reply->readAll();
+        int code = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        auto netErr = reply->error();
+        QString netErrStr = reply->errorString();
+        reply->deleteLater();
+
+        if (netErr != QNetworkReply::NoError) {
+            QMessageBox::warning(this, "連線失敗", netErrStr);
+            return;
+        }
+        QString text = QString::fromUtf8(body);
+
+        ui->text_r_stdout->setPlainText("submit_job HTTP " + QString::number(code) + "\n" + text);
+        ui->text_r_stderr->clear();
+
+        if (code != 200) {
+            ui->text_r_stderr->setPlainText("submit_job failed.\nHTTP " + QString::number(code) + "\n" + text);
             return;
         }
 
-        QByteArray body = reply->readAll();
-        int code = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-        reply->deleteLater();
+        currentJobId = extractJobIdFromText(text);
+        if (currentJobId.isEmpty()) {
+            ui->text_r_stderr->setPlainText("submit_job 成功但抓不到 job_id。\n請看 stdout 回傳內容是否有 job_id。");
+            return;
+        }
 
-        ui->text_r_stdout->setPlainText(
-            "已送出任務\njob_id=" + currentJobId + "\n"
-            "manager reply:\n" + QString::fromUtf8(body)
-        );
-        ui->text_r_stderr->clear();
-
+        ui->text_r_stdout->appendPlainText("\n解析到 job_id=" + currentJobId + "\n開始輪詢 job_status...");
         if (!pollTimer->isActive()) pollTimer->start();
     });
 }
