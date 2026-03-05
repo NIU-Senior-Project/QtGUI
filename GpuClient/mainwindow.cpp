@@ -1,161 +1,97 @@
-<<<<<<< HEAD
 #include "mainwindow.h"
-#include "./ui_mainwindow.h"
+#include "ui_mainwindow.h"
 
-#include <QHostAddress>
+#include "machineprovider_tcp.h"
+#include "homewindow.h"
+#include "rentwindow.h"
+#include "providewindow.h"
+#include "missionuploadwindow.h"
+
 #include <QTableWidgetItem>
+#include <QStringList>
+#include <QShortcut>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
-    ,socket(new QTcpSocket(this))
 {
     ui->setupUi(this);
 
-    //設定表格欄位
+    // --- pages ---
+    auto home = new HomeWindow(this);
+    auto rent = new RentWindow(this);
+    auto provide = new ProvideWindow(this);
+    auto mission = new MissionUploadWindow(this);
+
+    ui->layoutHome->addWidget(home);
+    ui->layoutRent->addWidget(rent);
+    ui->layoutProvide->addWidget(provide);
+    ui->layoutMission->addWidget(mission);
+
+    // --- debug table setup (保留你的原設定) ---
     ui->tableWidget->setColumnCount(4);
     QStringList headers;
     headers << "主機" << "GPU型號" << "容量" << "狀態";
     ui->tableWidget->setHorizontalHeaderLabels(headers);
 
-    //連結socket訊號
-    connect(socket, &QTcpSocket::connected,
-            this, &MainWindow::onConnected);
-    connect(socket, &QTcpSocket::readyRead,
-            this, &MainWindow::onReadyRead);
-    connect(socket, &QTcpSocket::errorOccurred,
-            this, &MainWindow::onErrorOccurred);
+    // --- provider (沿用你原本的 TCP) ---
+    provider = new TcpMachineProvider("127.0.0.1", 5050, this);
 
-    //嘗試連到本機 127.0.0.1 的5000port
-    socket->connectToHost(QHostAddress("127.0.0.1"), 5000);
-    ui->statusbar->showMessage("正在連線到伺服器...");
+    // 收到 machines：同時更新 Debug table + Rent page
+    connect(provider, &MachineProvider::machinesReady, this,
+        [this, rent](const QList<Machine>& machines){
+            // Debug table (保留你原本邏輯)
+            ui->tableWidget->setRowCount(0);
+            for (const auto& m : machines) {
+                int row = ui->tableWidget->rowCount();
+                ui->tableWidget->insertRow(row);
+                ui->tableWidget->setItem(row, 0, new QTableWidgetItem(m.name));
+                ui->tableWidget->setItem(row, 1, new QTableWidgetItem(m.gpuModel));
+                ui->tableWidget->setItem(row, 2, new QTableWidgetItem(m.vram));
+                ui->tableWidget->setItem(row, 3, new QTableWidgetItem(m.status));
+            }
 
+            // Rent page（先最小：更新第 0 張示意卡）
+            rent->setMachines(machines);
+
+            ui->statusbar->showMessage("已接收主機清單");
+        });
+
+    connect(provider, &MachineProvider::errorOccurred, this,
+        [this](const QString& msg){
+            ui->statusbar->showMessage("錯誤：" + msg);
+        });
+
+    // --- navigation (stack index) ---
+    // 0 Home, 1 Rent, 2 Provide, 3 Mission, 4 Debug
+    connect(home, &HomeWindow::goRent, this, [this](){ ui->stack->setCurrentIndex(1); });
+    connect(home, &HomeWindow::goProvide, this, [this](){ ui->stack->setCurrentIndex(2); });
+
+    connect(rent, &RentWindow::refreshRequested, this, [this](){
+        ui->statusbar->showMessage("正在取得主機清單...");
+        provider->fetchMachines();
+    });
+
+    connect(rent, &RentWindow::machineSelected, this, [this, mission](const Machine& m){
+        ui->statusbar->showMessage("Rent clicked: " + m.name);
+        mission->setSelectedMachine(m);
+        ui->stack->setCurrentIndex(3);
+    });
+
+    // --- debug shortcut ---
+    // mac: Cmd+D, win/linux: Ctrl+D
+    auto sc = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_D), this);
+    connect(sc, &QShortcut::activated, this, [this](){
+        int cur = ui->stack->currentIndex();
+        ui->stack->setCurrentIndex(cur == 4 ? 0 : 4);
+    });
+
+    // init
+    ui->statusbar->showMessage("正在取得主機清單...");
+    provider->fetchMachines();
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
 }
-
-void MainWindow::onConnected(){
-    ui->statusbar->showMessage("已連線到伺服器");
-    // 未來如果要主動要資料，可以：  socket->write("GET_MACHINES\n");
-}
-
-void MainWindow::onReadyRead(){
-
-    //把收到的資料累加到buffer
-    buffer.append(socket->readAll());
-
-    int index;
-    //以換行(\n)作為一筆資料
-    while((index = buffer.indexOf('\n')) != -1){
-        QByteArray line = buffer.left(index);
-        buffer.remove(0, index +1);
-
-        if(line == "END"){
-            //目前先用END當作資料結束標記
-            ui->statusbar->showMessage("已接收主機清單");
-            continue;
-        }
-
-        if(line.isEmpty())
-            continue;
-
-        QList<QByteArray> parts = line.split(',');
-        if(parts.size() <4)
-            continue;
-
-        int row = ui->tableWidget->rowCount();
-        ui->tableWidget->insertRow(row);
-        ui->tableWidget->setItem(row, 0, new QTableWidgetItem(QString::fromUtf8(parts[0])));
-        ui->tableWidget->setItem(row, 1, new QTableWidgetItem(QString::fromUtf8(parts[1])));
-        ui->tableWidget->setItem(row, 2, new QTableWidgetItem(QString::fromUtf8(parts[2])));
-        ui->tableWidget->setItem(row, 3, new QTableWidgetItem(QString::fromUtf8(parts[3])));
-    }
-}
-
-void MainWindow::onErrorOccurred(QAbstractSocket::SocketError){
-    ui->statusbar->showMessage("連線錯誤:" + socket->errorString());
-}
-=======
-#include "mainwindow.h"
-#include "./ui_mainwindow.h"
-
-#include <QHostAddress>
-#include <QTableWidgetItem>
-
-MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
-    , ui(new Ui::MainWindow)
-    ,socket(new QTcpSocket(this))
-{
-    ui->setupUi(this);
-
-    //設定表格欄位
-    ui->tableWidget->setColumnCount(4);
-    QStringList headers;
-    headers << "主機" << "GPU型號" << "容量" << "狀態";
-    ui->tableWidget->setHorizontalHeaderLabels(headers);
-
-    //連結socket訊號
-    connect(socket, &QTcpSocket::connected,
-            this, &MainWindow::onConnected);
-    connect(socket, &QTcpSocket::readyRead,
-            this, &MainWindow::onReadyRead);
-    connect(socket, &QTcpSocket::errorOccurred,
-            this, &MainWindow::onErrorOccurred);
-
-    //嘗試連到本機 127.0.0.1 的5000port
-    socket->connectToHost(QHostAddress("127.0.0.1"), 5000);
-    ui->statusbar->showMessage("正在連線到伺服器...");
-
-}
-
-MainWindow::~MainWindow()
-{
-    delete ui;
-}
-
-void MainWindow::onConnected(){
-    ui->statusbar->showMessage("已連線到伺服器");
-    // 未來如果要主動要資料，可以：  socket->write("GET_MACHINES\n");
-}
-
-void MainWindow::onReadyRead(){
-
-    //把收到的資料累加到buffer
-    buffer.append(socket->readAll());
-
-    int index;
-    //以換行(\n)作為一筆資料
-    while((index = buffer.indexOf('\n')) != -1){
-        QByteArray line = buffer.left(index);
-        buffer.remove(0, index +1);
-
-        if(line == "END"){
-            //目前先用END當作資料結束標記
-            ui->statusbar->showMessage("已接收主機清單");
-            continue;
-        }
-
-        if(line.isEmpty())
-            continue;
-
-        QList<QByteArray> parts = line.split(',');
-        if(parts.size() <4)
-            continue;
-
-        int row = ui->tableWidget->rowCount();
-        ui->tableWidget->insertRow(row);
-        ui->tableWidget->setItem(row, 0, new QTableWidgetItem(QString::fromUtf8(parts[0])));
-        ui->tableWidget->setItem(row, 1, new QTableWidgetItem(QString::fromUtf8(parts[1])));
-        ui->tableWidget->setItem(row, 2, new QTableWidgetItem(QString::fromUtf8(parts[2])));
-        ui->tableWidget->setItem(row, 3, new QTableWidgetItem(QString::fromUtf8(parts[3])));
-    }
-}
-
-void MainWindow::onErrorOccurred(QAbstractSocket::SocketError){
-    ui->statusbar->showMessage("連線錯誤:" + socket->errorString());
-}
->>>>>>> da6a78a117b1d6406ccfe0aca2c6bf1c37c57dfc

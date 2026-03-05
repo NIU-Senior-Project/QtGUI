@@ -1,0 +1,185 @@
+/* glass.qss - Blue/White Glass Theme (Integrated) */
+
+/* ---------- Base ---------- */
+QWidget {
+  font-family: "Inter", "Noto Sans", "PingFang TC", "Microsoft JhengHei";
+  font-size: 14px;
+  color: #0b1220;
+}
+
+QMainWindow, QWidget#centralwidget {
+  background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+    stop:0 rgba(235, 245, 255, 255),
+    stop:1 rgba(248, 252, 255, 255)
+  );
+}
+
+/* ---------- Glass Containers ---------- */
+QFrame#topBar,
+QFrame#glassPanel,
+QFrame#machineInfoCard,
+QFrame#uploadPanel {
+  background: rgba(255, 255, 255, 170);
+  border: 1px solid rgba(90, 170, 255, 110);
+  border-radius: 18px;
+}
+
+QFrame#cardRent,
+QFrame#cardProvide,
+QFrame[name^="machineCard_"] {
+  background: rgba(255, 255, 255, 155);
+  border: 1px solid rgba(90, 170, 255, 100);
+  border-radius: 22px;
+}
+
+/* Ensure machine cards always have size (even placeholders) */
+QFrame[name^="machineCard_"] {
+  min-height: 150px;
+}
+
+/* ---------- Logo ---------- */
+/* Old circle logo (if still used somewhere) */
+QLabel#logoMark {
+  background: rgba(255, 255, 255, 180);
+  border: 1px solid rgba(90, 170, 255, 160);
+  border-radius: 20px;
+  font-size: 18px;
+}
+
+/* Wide logo label (recommended) */
+QLabel#logoWide {
+  background: transparent;
+  border: none;
+}
+
+/* ---------- Typography ---------- */
+QLabel#brandTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0b2a5a;
+}
+
+QLabel#pageTitle {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0b2a5a;
+}
+
+QLabel#rentTitle, QLabel#provideTitle,
+QLabel#formTitle, QLabel#infoTitle, QLabel#uploadTitle {
+  font-size: 26px;
+  font-weight: 800;
+  color: #0b2a5a;
+}
+
+QLabel#rentDesc, QLabel#provideDesc,
+QLabel#uploadDesc, QLabel#infoHint, QLabel#hintLabel {
+  color: rgba(11, 18, 32, 170);
+}
+
+/* Make form labels readable (Provide page) */
+QFrame#glassPanel QLabel {
+  color: #0b2a5a;
+  font-weight: 700;
+}
+
+/* Rent machine card text readable (fix “too white to see”) */
+QFrame[name^="machineCard_"] QLabel {
+  color: #0b2a5a;
+}
+
+/* ---------- Inputs ---------- */
+QLineEdit {
+  background: rgba(255, 255, 255, 200);
+  color: #0b1220;
+  border: 1px solid rgba(90, 170, 255, 120);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+QLineEdit:focus {
+  border: 2px solid rgba(44, 140, 255, 190);
+}
+
+/* ---------- Buttons ---------- */
+QPushButton {
+  background: rgba(44, 140, 255, 220);
+  color: white;
+  border: 1px solid rgba(44, 140, 255, 255);
+  border-radius: 14px;
+  padding: 10px 14px;
+  font-weight: 700;
+}
+
+QPushButton:hover {
+  background: rgba(44, 140, 255, 245);
+}
+
+QPushButton:pressed {
+  background: rgba(20, 110, 230, 255);
+}
+
+/* Secondary button look */
+QPushButton#btnSettings, QPushButton#btnRefresh {
+  background: rgba(255, 255, 255, 200);
+  color: #0b2a5a;
+  border: 1px solid rgba(90, 170, 255, 170);
+}
+
+QPushButton#btnSettings:hover, QPushButton#btnRefresh:hover {
+  background: rgba(255, 255, 255, 230);
+}
+
+/* ---------- Rent Scroll Area (fix dark strip on mac) ---------- */
+/* ✅ 只處理 viewport/容器，不要把裡面的卡片也變透明 */
+QScrollArea {
+  border: none;
+  background: transparent;
+}
+
+QScrollArea > QWidget > QWidget {
+    background: transparent;
+}
+
+QAbstractScrollArea {
+    background: transparent;
+}
+
+
+QScrollArea::viewport {
+  background: transparent;
+}
+
+/* scrollArea 內承載內容的 widget（你命名的 scrollWidget） */
+QWidget#scrollWidget {
+  background: transparent;
+}
+
+/* ✅ 重新強制 machineCard 套回玻璃卡片樣式（避免被其他規則蓋掉） */
+QScrollArea QFrame[name^="machineCard_"] {
+  background: rgba(255, 255, 255, 155);
+  border: 1px solid rgba(90, 170, 255, 100);
+  border-radius: 22px;
+
+  /* 避免卡片高度被拉超大、按鈕被推到很下面 */
+  min-height: 170px;
+  max-height: 170px;
+  padding: 0px;
+}
+
+QFrame[role="machineCard"] {
+  background: rgba(255,255,255,155);
+  border: 1px solid rgba(90,170,255,100);
+  border-radius: 22px;
+  min-height: 170px;
+  max-height: 170px;
+}
+
+QFrame[role="machineCard"] QLabel {
+  color: #0b2a5a;
+}
+
+/* 卡片內文字顏色 */
+QScrollArea QFrame[name^="machineCard_"] QLabel {
+  color: #0b2a5a;
+}

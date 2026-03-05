@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
     });
 
     //監聽所有ip的5000port
-    if (!server.listen(QHostAddress::Any, 5000)) {
+    if (!server.listen(QHostAddress::Any, 5050)) {
         qCritical() << "Cannot start server:" << server.errorString();
         return -1;
     }
