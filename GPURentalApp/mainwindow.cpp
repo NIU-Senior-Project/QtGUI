@@ -51,7 +51,7 @@ MainWindow::MainWindow(QWidget *parent)
     pollTimer = new QTimer(this);
     pollTimer->setInterval(2000);
     connect(pollTimer, &QTimer::timeout, this, &MainWindow::pollJobStatus);
-
+ 
     ui->vlay_provider_cards->insertWidget(0, createProviderCard("B", "RTX 4070", "12GB", 35.0, "idle")); 
     ui->vlay_provider_cards->insertWidget(0, createProviderCard("C", "RTX 3080", "10GB", 28.0, "idle"));
     auto *first = qobject_cast<QPushButton*>(ui->vlay_provider_cards->itemAt(0)->widget());
@@ -152,7 +152,7 @@ void MainWindow::submitJob()
 
     managerIpPort = ui->edit_p_manager->text().trimmed(); 
     if (managerIpPort.isEmpty()) {
-        QMessageBox::warning(this, "缺少 manager", "請輸入 node-manager 位址，例如 203.145.206.210:8080");
+        QMessageBox::warning(this, "缺少 manager", "請輸入 node-manager 位址，例如 100.XX.XX.XX:8080");
         return;
     }
 
@@ -194,8 +194,9 @@ void MainWindow::submitJob()
         if (currentJobId.isEmpty()) {
             ui->text_r_stderr->setPlainText("submit_job 成功但抓不到 job_id。\n請看 stdout 回傳內容是否有 job_id。");
             return;
-        }
-
+        } 
+        m_warnedThisJob = false;
+        m_warnReasonThisJob.clear();
         ui->text_r_stdout->appendPlainText("\n解析到 job_id=" + currentJobId + "\n開始輪詢 job_status...");
         if (!pollTimer->isActive()) pollTimer->start();
     });
@@ -216,29 +217,53 @@ void MainWindow::pollJobStatus()
     auto *reply = nam->get(req);
 
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-        if (reply->error() != QNetworkReply::NoError) {
-        QMessageBox::warning(this, "連線失敗", reply->errorString());
-        reply->deleteLater();
-        return;
-       }
-        QByteArray body = reply->readAll();
-        int code = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        const auto netErr = reply->error();
+        const QString netErrStr = reply->errorString();
+        const QByteArray body = reply->readAll();
+        const int code = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         reply->deleteLater();
 
+        auto warnOnceAndStop = [&](const QString& reason) {
+            if (m_warnedThisJob) return;         
+            m_warnedThisJob = true;
+            m_warnReasonThisJob = reason;
+            pollTimer->stop();                   
+
+            if (ui->text_r_stderr) ui->text_r_stderr->setPlainText(reason);
+
+            QMessageBox msg;
+            msg.setIcon(QMessageBox::Warning);
+            msg.setWindowTitle("連線失敗");
+            msg.setText("目前無法取得任務狀態（只會提醒一次）。\n"
+                        "請確認 manager / node 連線後，再按一次「送出任務」。");
+            msg.setInformativeText(reason);
+            msg.setStandardButtons(QMessageBox::Ok);  
+            msg.exec();
+        };
+        if (netErr != QNetworkReply::NoError) {
+            warnOnceAndStop(QString("[poll] network error: %1").arg(netErrStr));
+            return;
+        }
+        if (code >= 500) {
+            warnOnceAndStop(QString("[poll] server error HTTP %1\n%2")
+                            .arg(code)
+                            .arg(QString::fromUtf8(body)));
+            return;
+        }
         if (code == 202) {
-            ui->text_r_stdout->appendPlainText(".");
+            if (ui->text_r_stdout) ui->text_r_stdout->appendPlainText(".");
             return;
         }
 
         if (code == 200) {
             pollTimer->stop();
-            ui->text_r_stdout->appendPlainText("\n=== JOB FINISHED ===\n" + QString::fromUtf8(body));
+            if (ui->text_r_stdout) ui->text_r_stdout->appendPlainText("\n=== JOB FINISHED ===\n" + QString::fromUtf8(body));
+            if (ui->text_r_stderr) ui->text_r_stderr->clear();
             return;
         }
-
-        pollTimer->stop();
-        ui->text_r_stderr->setPlainText(QString("job_status HTTP %1\n%2")
-                                        .arg(code).arg(QString::fromUtf8(body)));
+        warnOnceAndStop(QString("[poll] unexpected HTTP %1\n%2")
+                        .arg(code)
+                        .arg(QString::fromUtf8(body)));
     });
 }
 

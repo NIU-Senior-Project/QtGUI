@@ -45,13 +45,15 @@ private:
 
 private:
     Ui::MainWindow *ui = nullptr;
-
     QPushButton *currentProviderButton = nullptr;
     QNetworkAccessManager *nam = nullptr;
     QTimer *pollTimer = nullptr;
     QString managerIpPort;       
     QString selectedNodeIp;
     QString currentJobId;
+    bool m_warnedThisJob = false;   
+    QString m_warnReasonThisJob;    
+
 };
 
 #endif // MAINWINDOW_H
