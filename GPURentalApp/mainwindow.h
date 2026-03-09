@@ -28,6 +28,7 @@ private slots:
     void pollJobStatus();
     void registerNode();
     void applyPrice();
+    void deleteNode();
 
 private:
     void setupConnections();

@@ -75,6 +75,10 @@ MainWindow::~MainWindow()
 void MainWindow::refreshNodes()
 {
     managerIpPort = ui->edit_p_manager->text().trimmed();
+    if (ui->lbl_r_manager) {
+    ui->lbl_r_manager->setText("Manager IP: "+managerIpPort);
+    }
+
     if (managerIpPort.isEmpty()) {
         QMessageBox::warning(this, "缺少 manager", "請輸入 210 的 tailscaleIP:8080");
         return;
@@ -272,20 +276,21 @@ void MainWindow::registerNode()
 {
     managerIpPort = ui->edit_p_manager->text().trimmed(); 
     QString nodeIp = ui->edit_p_node_ip->text().trimmed();
-    QString gpuModel = ui->lbl_p_gpu_value->text().trimmed();
+    QString gpuModel = ui->edit_p_gpu_model->text().trimmed();
+    QString vram     = ui->edit_p_vram->text().trimmed();
 
     if (managerIpPort.isEmpty() || nodeIp.isEmpty() || gpuModel.isEmpty() || gpuModel == "-") {
         QMessageBox::warning(this, "資料不足", "請確認 manager、本機 IP、GPU 型號都有值（先點左側主機卡片）。");
         return;
     }
-
+    if (vram.isEmpty()) vram = "-";
     QJsonObject payload{{"ip", nodeIp}, {"gpu_model", gpuModel}};
 
     QNetworkRequest req(QUrl(QString("http://%1/register").arg(managerIpPort)));
     req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
     auto *reply = nam->post(req, QJsonDocument(payload).toJson());
-    connect(reply, &QNetworkReply::finished, this, [this, reply, nodeIp, gpuModel]() {
+    connect(reply, &QNetworkReply::finished, this, [this, reply, nodeIp, gpuModel, vram]() {
         if (reply->error() != QNetworkReply::NoError) {
         QMessageBox::warning(this, "連線失敗", reply->errorString());
         reply->deleteLater();
@@ -299,7 +304,9 @@ void MainWindow::registerNode()
             ui->text_p_log->appendPlainText("[INFO] Registered node: " + nodeIp);
 
             double price = ui->edit_p_price ? ui->edit_p_price->text().toDouble() : 0.0;
-            addMyHostToTop(nodeIp, gpuModel, "-", price, "idle");
+            addMyHostToTop(nodeIp, gpuModel, vram, price, "idle");
+            if (ui->lbl_p_status_value) 
+                ui->lbl_p_status_value->setText("idle");
         } else {
             ui->text_p_log->appendPlainText(QString("[ERROR] register failed HTTP %1: ").arg(code)
                                             + QString::fromUtf8(body));
@@ -329,8 +336,8 @@ void MainWindow::handleProviderCardClicked()
     }
 
     if (ui->lbl_p_host_value)   ui->lbl_p_host_value->setText(hostId);
-    if (ui->lbl_p_gpu_value)    ui->lbl_p_gpu_value->setText(gpu);
-    if (ui->lbl_p_vram_value)   ui->lbl_p_vram_value->setText(vram);
+    if (ui->edit_p_gpu_model)   ui->edit_p_gpu_model->setText(gpu);
+    if (ui->edit_p_vram)        ui->edit_p_vram->setText(vram);
     if (ui->lbl_p_status_value) ui->lbl_p_status_value->setText(status);
 }
 
@@ -410,6 +417,60 @@ void MainWindow::addMyHostToTop(const QString& hostId,
     card->click();
 }
 
+void MainWindow::deleteNode()
+{
+    managerIpPort = ui->edit_p_manager->text().trimmed();
+    QString nodeIp = ui->edit_p_node_ip->text().trimmed();
+    if (managerIpPort.isEmpty() || nodeIp.isEmpty()) {
+        QMessageBox::warning(this, "資料不足", "請確認 manager IP 與 node IP");
+        return;
+    }
+    if (QMessageBox::question(this,"確認刪除","確定要刪除這個節點嗎？")!= QMessageBox::Yes){
+        return;
+    }
+
+    QJsonObject payload{
+        {"ip", nodeIp}
+    };
+
+    QNetworkRequest req(QUrl(QString("http://%1/deregister").arg(managerIpPort)));
+    req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+
+    auto *reply = nam->post(req, QJsonDocument(payload).toJson());
+
+    connect(reply, &QNetworkReply::finished, this, [this, reply, nodeIp]() {
+
+        if (reply->error() != QNetworkReply::NoError) {
+            QMessageBox::warning(this, "連線失敗", reply->errorString());
+            reply->deleteLater();
+            return;
+        }
+
+        QByteArray body = reply->readAll();
+        int code = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        reply->deleteLater();
+
+        if (code == 200) {
+
+            ui->text_p_log->appendPlainText("[INFO] Deregistered node: " + nodeIp);
+
+            QMessageBox::information(this, "成功", "節點已刪除");
+
+            // 重新刷新節點列表
+            refreshNodes();
+        }
+        else {
+
+            QMessageBox::warning(this,
+                                 "刪除失敗",
+                                 QString("HTTP %1\n%2")
+                                 .arg(code)
+                                 .arg(QString::fromUtf8(body)));
+        }
+    });
+}
+
+
 // -------------------- UI connections --------------------
 void MainWindow::setupConnections()
 {
@@ -433,4 +494,5 @@ void MainWindow::setupConnections()
     connect(ui->btn_p_register, &QPushButton::clicked, this, &MainWindow::registerNode);
     connect(ui->btn_p_refresh, &QPushButton::clicked, this, &MainWindow::refreshNodes);
     connect(ui->btn_p_apply_price, &QPushButton::clicked, this, &MainWindow::applyPrice);
+    connect(ui->btn_p_delete_node, &QPushButton::clicked, this, &MainWindow::deleteNode);
 }
