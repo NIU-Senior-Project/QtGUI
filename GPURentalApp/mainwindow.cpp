@@ -52,8 +52,8 @@ MainWindow::MainWindow(QWidget *parent)
     pollTimer->setInterval(2000);
     connect(pollTimer, &QTimer::timeout, this, &MainWindow::pollJobStatus);
  
-    ui->vlay_provider_cards->insertWidget(0, createProviderCard("B", "RTX 4070", "12GB", 35.0, "idle")); 
-    ui->vlay_provider_cards->insertWidget(0, createProviderCard("C", "RTX 3080", "10GB", 28.0, "idle"));
+    //ui->vlay_provider_cards->insertWidget(0, createProviderCard("B", "RTX 4070", "12GB", 35.0, "idle")); 
+    //ui->vlay_provider_cards->insertWidget(0, createProviderCard("C", "RTX 3080", "10GB", 28.0, "idle"));
     auto *first = qobject_cast<QPushButton*>(ui->vlay_provider_cards->itemAt(0)->widget());
     if (first) first->click();
 
@@ -469,6 +469,80 @@ void MainWindow::deleteNode()
         }
     });
 }
+QPushButton* MainWindow::createSimpleProviderNodeCard(const QString& ip)
+{
+    auto *btn = new QPushButton(this);
+
+    btn->setText(QString("%1\n狀態: 已註冊").arg(ip));
+    btn->setProperty("hostId", ip);
+    btn->setProperty("gpu", "-");
+    btn->setProperty("vram", "-");
+    btn->setProperty("price", 0.0);
+    btn->setProperty("status", "idle");
+    btn->setProperty("owned", false);
+
+    btn->setMinimumHeight(80);
+    btn->setStyleSheet(
+        "QPushButton{ text-align:left; padding:10px; border:1px solid #ccc; border-radius:12px; }"
+        "QPushButton:hover{ border:1px solid #666; }"
+    );
+
+    connect(btn, &QPushButton::clicked, this, &MainWindow::handleProviderCardClicked);
+    return btn;
+}
+// 讓出租者頁面的左側市場列表跟租借者頁面的一樣
+void MainWindow::refreshProviderNodes()
+{
+    managerIpPort = ui->edit_p_manager->text().trimmed();
+    if (managerIpPort.isEmpty()) {
+        return;
+    }
+
+    QUrl url(QString("http://%1/nodes").arg(managerIpPort));
+    QNetworkRequest req(url);
+    auto *reply = nam->get(req);
+
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        if (reply->error() != QNetworkReply::NoError) {
+            ui->text_p_log->appendPlainText("[ERROR] refreshProviderNodes: " + reply->errorString());
+            reply->deleteLater();
+            return;
+        }
+
+        QByteArray body = reply->readAll();
+        int code = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        reply->deleteLater();
+
+        if (code != 200) {
+            ui->text_p_log->appendPlainText(
+                QString("[ERROR] refreshProviderNodes HTTP %1\n%2")
+                    .arg(code)
+                    .arg(QString::fromUtf8(body))
+            );
+            return;
+        }
+
+        QJsonParseError err{};
+        QJsonDocument doc = QJsonDocument::fromJson(body, &err);
+        if (err.error != QJsonParseError::NoError || !doc.isArray()) {
+            ui->text_p_log->appendPlainText("[ERROR] provider nodes 格式錯誤");
+            return;
+        }
+
+        clearLayout(ui->vlay_provider_cards);
+
+        const auto arr = doc.array();
+        for (auto v : arr) {
+            QString ip = v.toString();
+            auto *btn = createSimpleProviderNodeCard(ip);
+            ui->vlay_provider_cards->addWidget(btn);
+        }
+
+        ui->vlay_provider_cards->addStretch(1);
+
+        ui->text_p_log->appendPlainText(QString("[INFO] 已同步 %1 個節點").arg(arr.size()));
+    });
+}
 
 
 // -------------------- UI connections --------------------
@@ -480,6 +554,7 @@ void MainWindow::setupConnections()
     });
     connect(ui->btn_role_provider, &QPushButton::clicked, this, [this]() {
         ui->stackedWidget->setCurrentIndex(2);
+        refreshProviderNodes();
     });
 
     connect(ui->btn_back_renter, &QPushButton::clicked, this, [this]() {
@@ -488,11 +563,13 @@ void MainWindow::setupConnections()
     connect(ui->btn_back_provider, &QPushButton::clicked, this, [this]() {
         ui->stackedWidget->setCurrentIndex(0);
     });
-
+    connect(ui->btn_p_refresh, &QPushButton::clicked, this, [this]() {
+        refreshProviderNodes();
+        refreshNodes();
+    });
     connect(ui->btn_r_refresh_nodes, &QPushButton::clicked, this, &MainWindow::refreshNodes);
     connect(ui->btn_r_submit_job, &QPushButton::clicked, this, &MainWindow::submitJob);
     connect(ui->btn_p_register, &QPushButton::clicked, this, &MainWindow::registerNode);
-    connect(ui->btn_p_refresh, &QPushButton::clicked, this, &MainWindow::refreshNodes);
     connect(ui->btn_p_apply_price, &QPushButton::clicked, this, &MainWindow::applyPrice);
     connect(ui->btn_p_delete_node, &QPushButton::clicked, this, &MainWindow::deleteNode);
 }

@@ -301,10 +301,10 @@
              <widget class="QWidget" name="verticalLayoutWidget">
               <property name="geometry">
                <rect>
-                <x>-1</x>
-                <y>-1</y>
-                <width>511</width>
-                <height>701</height>
+                <x>9</x>
+                <y>9</y>
+                <width>491</width>
+                <height>681</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="vlay_provider_cards">
@@ -359,7 +359,7 @@
                   <x>10</x>
                   <y>10</y>
                   <width>501</width>
-                  <height>111</height>
+                  <height>61</height>
                  </rect>
                 </property>
                 <layout class="QHBoxLayout" name="hlay_provider_topbar">
@@ -402,7 +402,7 @@
                 <property name="geometry">
                  <rect>
                   <x>9</x>
-                  <y>119</y>
+                  <y>79</y>
                   <width>511</width>
                   <height>421</height>
                  </rect>
@@ -563,9 +563,9 @@
                 <property name="geometry">
                  <rect>
                   <x>10</x>
-                  <y>540</y>
+                  <y>510</y>
                   <width>511</width>
-                  <height>91</height>
+                  <height>81</height>
                  </rect>
                 </property>
                 <property name="title">
@@ -618,9 +618,9 @@
                 <property name="geometry">
                  <rect>
                   <x>10</x>
-                  <y>630</y>
+                  <y>600</y>
                   <width>511</width>
-                  <height>81</height>
+                  <height>111</height>
                  </rect>
                 </property>
                 <property name="title">
@@ -632,7 +632,7 @@
                    <x>10</x>
                    <y>20</y>
                    <width>491</width>
-                   <height>51</height>
+                   <height>81</height>
                   </rect>
                  </property>
                  <property name="readOnly">

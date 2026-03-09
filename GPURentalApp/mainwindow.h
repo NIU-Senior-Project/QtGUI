@@ -44,6 +44,9 @@ private:
                         double price,
                         const QString& status);
 
+    void refreshProviderNodes();
+    QPushButton* createSimpleProviderNodeCard(const QString& ip);                    
+
 private:
     Ui::MainWindow *ui = nullptr;
     QPushButton *currentProviderButton = nullptr;
