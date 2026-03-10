@@ -5,6 +5,7 @@
 #include <QTimer>
 #include <QPushButton>
 #include <QNetworkAccessManager>
+#include <QMap>
 
 class QScrollArea;
 class QVBoxLayout;
@@ -29,7 +30,7 @@ private slots:
     void registerNode();
     void applyPrice();
     void deleteNode();
-
+    void clearProviderInfo();
 private:
     void setupConnections();
     QPushButton* createProviderCard(const QString& hostId,
@@ -57,6 +58,7 @@ private:
     QString currentJobId;
     bool m_warnedThisJob = false;   
     QString m_warnReasonThisJob;    
+    QMap<QString, QString> m_nodeStatusMap;
 
 };
 

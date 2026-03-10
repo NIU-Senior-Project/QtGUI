@@ -41,12 +41,15 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    ui->edit_r_container->setText("docker.io/rocm/dev-ubuntu-24.04:7.2");
+    ui->edit_r_container->setText("nvidia/cuda:13.1.1-cudnn-devel-ubuntu24.04");
     ui->edit_r_script->setPlainText("nvidia-smi");
     ui->edit_p_manager->setText("100.99.159.99:8080");
     ui->sa_renter_nodes->setWidgetResizable(true);
     ui->sa_provider_market->setWidgetResizable(true);
 
+    QFont font;
+    font.setPointSize(10);
+    this->setFont(font);
     nam = new QNetworkAccessManager(this);
     pollTimer = new QTimer(this);
     pollTimer->setInterval(2000);
@@ -122,8 +125,15 @@ void MainWindow::refreshNodes()
 
         for (auto v : arr) {
             QString ip = v.toString();
-            auto *btn = new QPushButton(ip, ui->sa_renter_nodes_content);
-            btn->setMinimumHeight(48);
+
+            if (!m_nodeStatusMap.contains(ip)) {
+                m_nodeStatusMap[ip] = "idle";
+            }
+            QString status = m_nodeStatusMap.value(ip, "idle");
+            auto *btn = new QPushButton(QString("Node: %1\nStatus: %2").arg(ip).arg(status),
+                                        ui->sa_renter_nodes_content
+            );
+            btn->setMinimumHeight(50);
 
             connect(btn, &QPushButton::clicked, this, [this, ip]() {
                 selectedNodeIp = ip;
@@ -133,7 +143,6 @@ void MainWindow::refreshNodes()
             ui->vlay_renter_nodes->addWidget(btn);
         }
         ui->vlay_renter_nodes->addStretch(1);
-
         ui->sa_renter_nodes_content->adjustSize();
         ui->sa_renter_nodes->viewport()->update();
     });
@@ -199,6 +208,9 @@ void MainWindow::submitJob()
             ui->text_r_stderr->setPlainText("submit_job 成功但抓不到 job_id。\n請看 stdout 回傳內容是否有 job_id。");
             return;
         } 
+        m_nodeStatusMap[selectedNodeIp] = "running";
+        refreshNodes();
+        refreshProviderNodes();
         m_warnedThisJob = false;
         m_warnReasonThisJob.clear();
         ui->text_r_stdout->appendPlainText("\n解析到 job_id=" + currentJobId + "\n開始輪詢 job_status...");
@@ -246,12 +258,18 @@ void MainWindow::pollJobStatus()
         };
         if (netErr != QNetworkReply::NoError) {
             warnOnceAndStop(QString("[poll] network error: %1").arg(netErrStr));
+            m_nodeStatusMap[selectedNodeIp] = "offline";
+            refreshNodes();
+            refreshProviderNodes();
             return;
         }
         if (code >= 500) {
             warnOnceAndStop(QString("[poll] server error HTTP %1\n%2")
                             .arg(code)
                             .arg(QString::fromUtf8(body)));
+            m_nodeStatusMap[selectedNodeIp] = "offline";
+            refreshNodes();
+            refreshProviderNodes();                
             return;
         }
         if (code == 202) {
@@ -263,6 +281,11 @@ void MainWindow::pollJobStatus()
             pollTimer->stop();
             if (ui->text_r_stdout) ui->text_r_stdout->appendPlainText("\n=== JOB FINISHED ===\n" + QString::fromUtf8(body));
             if (ui->text_r_stderr) ui->text_r_stderr->clear();
+             
+            m_nodeStatusMap[selectedNodeIp] = "idle";
+            refreshNodes();
+            refreshProviderNodes();
+
             return;
         }
         warnOnceAndStop(QString("[poll] unexpected HTTP %1\n%2")
@@ -279,9 +302,13 @@ void MainWindow::registerNode()
     QString gpuModel = ui->edit_p_gpu_model->text().trimmed();
     QString vram     = ui->edit_p_vram->text().trimmed();
 
-    if (managerIpPort.isEmpty() || nodeIp.isEmpty() || gpuModel.isEmpty() || gpuModel == "-") {
-        QMessageBox::warning(this, "資料不足", "請確認 manager、本機 IP、GPU 型號都有值（先點左側主機卡片）。");
+    if (managerIpPort.isEmpty() || nodeIp.isEmpty()) {
+        QMessageBox::warning(this, "資料不足", "請確認 manager 與本機 IP 都有值。");
         return;
+    }
+
+    if (gpuModel.isEmpty() || gpuModel == "-") {
+        gpuModel = "";  
     }
     if (vram.isEmpty()) vram = "-";
     QJsonObject payload{{"ip", nodeIp}, {"gpu_model", gpuModel}};
@@ -302,11 +329,9 @@ void MainWindow::registerNode()
 
         if (code == 200) {
             ui->text_p_log->appendPlainText("[INFO] Registered node: " + nodeIp);
-
-            double price = ui->edit_p_price ? ui->edit_p_price->text().toDouble() : 0.0;
-            addMyHostToTop(nodeIp, gpuModel, vram, price, "idle");
             if (ui->lbl_p_status_value) 
                 ui->lbl_p_status_value->setText("idle");
+            refreshProviderNodes();    
         } else {
             ui->text_p_log->appendPlainText(QString("[ERROR] register failed HTTP %1: ").arg(code)
                                             + QString::fromUtf8(body));
@@ -416,72 +441,78 @@ void MainWindow::addMyHostToTop(const QString& hostId,
     ui->vlay_provider_cards->insertWidget(0, card);
     card->click();
 }
-
+//刪除節點
 void MainWindow::deleteNode()
 {
     managerIpPort = ui->edit_p_manager->text().trimmed();
-    QString nodeIp = ui->edit_p_node_ip->text().trimmed();
+    QString nodeIp = ui->lbl_p_host_value->text().trimmed();
+
     if (managerIpPort.isEmpty() || nodeIp.isEmpty()) {
         QMessageBox::warning(this, "資料不足", "請確認 manager IP 與 node IP");
         return;
     }
-    if (QMessageBox::question(this,"確認刪除","確定要刪除這個節點嗎？")!= QMessageBox::Yes){
+
+    if (QMessageBox::question(this,"確認刪除","確定要刪除這個節點嗎？")
+        != QMessageBox::Yes) {
         return;
     }
+
+    QUrl url(QString("http://%1/deregister").arg(managerIpPort));
 
     QJsonObject payload{
         {"ip", nodeIp}
     };
 
-    QNetworkRequest req(QUrl(QString("http://%1/deregister").arg(managerIpPort)));
+    QNetworkRequest req(url);
     req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
     auto *reply = nam->post(req, QJsonDocument(payload).toJson());
 
     connect(reply, &QNetworkReply::finished, this, [this, reply, nodeIp]() {
 
-        if (reply->error() != QNetworkReply::NoError) {
-            QMessageBox::warning(this, "連線失敗", reply->errorString());
-            reply->deleteLater();
-            return;
-        }
-
         QByteArray body = reply->readAll();
         int code = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+
         reply->deleteLater();
 
         if (code == 200) {
-
-            ui->text_p_log->appendPlainText("[INFO] Deregistered node: " + nodeIp);
-
-            QMessageBox::information(this, "成功", "節點已刪除");
-
-            // 重新刷新節點列表
-            refreshNodes();
-        }
-        else {
-
-            QMessageBox::warning(this,
-                                 "刪除失敗",
-                                 QString("HTTP %1\n%2")
-                                 .arg(code)
-                                 .arg(QString::fromUtf8(body)));
+            ui->text_p_log->appendPlainText("[INFO] 已刪除節點: " + nodeIp);
+            QMessageBox::information(this,"成功","節點已刪除");
+            refreshProviderNodes();
+            clearProviderInfo();
+        } else {
+            QMessageBox::warning(this,"刪除失敗",QString::fromUtf8(body));
         }
     });
 }
+//在刪除節點後，清空右側主機資訊
+void MainWindow::clearProviderInfo()
+{
+    ui->lbl_p_host_value->setText("-");
+    ui->edit_p_gpu_model->setText("-");
+    ui->edit_p_vram->setText("-");
+    ui->edit_p_price->setText("0.00");
+    ui->lbl_p_status_value->setText("-");
+}
+
 QPushButton* MainWindow::createSimpleProviderNodeCard(const QString& ip)
 {
     auto *btn = new QPushButton(this);
 
-    btn->setText(QString("%1\n狀態: 已註冊").arg(ip));
+    QString status = m_nodeStatusMap.value(ip, "idle");
+
+    btn->setText(QString("Node: %1\nGPU: -\nVRAM: -\nStatus: %2")
+                 .arg(ip)
+                 .arg(status));
+
     btn->setProperty("hostId", ip);
     btn->setProperty("gpu", "-");
     btn->setProperty("vram", "-");
     btn->setProperty("price", 0.0);
-    btn->setProperty("status", "idle");
-    btn->setProperty("owned", false);
+    btn->setProperty("status", status);
+    btn->setProperty("owned", true);
 
-    btn->setMinimumHeight(80);
+    btn->setMinimumHeight(95);
     btn->setStyleSheet(
         "QPushButton{ text-align:left; padding:10px; border:1px solid #ccc; border-radius:12px; }"
         "QPushButton:hover{ border:1px solid #666; }"
