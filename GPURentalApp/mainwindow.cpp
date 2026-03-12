@@ -41,6 +41,7 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    setWindowTitle("GPU Rental");
     ui->edit_r_container->setText("nvidia/cuda:13.1.1-cudnn-devel-ubuntu24.04");
     ui->edit_r_script->setPlainText("nvidia-smi");
     ui->edit_p_manager->setText("100.99.159.99:8080");
