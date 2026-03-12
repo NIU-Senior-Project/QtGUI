@@ -17,12 +17,17 @@ set(PROJECT_SOURCES
     mainwindow.cpp
     mainwindow.h
     mainwindow.ui
+    resources.qrc
 )
+
+set(APP_ICON_MACOS "${CMAKE_CURRENT_SOURCE_DIR}/image/AppIcon.icns")
+set_source_files_properties(${APP_ICON_MACOS} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(GPURentalApp
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
+        ${APP_ICON_MACOS}
     )
 else()
     if(ANDROID)
@@ -32,6 +37,7 @@ else()
     else()
         add_executable(GPURentalApp
             ${PROJECT_SOURCES}
+            ${APP_ICON_MACOS}
         )
     endif()
 endif()
@@ -49,6 +55,7 @@ set_target_properties(GPURentalApp PROPERTIES
     ${BUNDLE_ID_OPTION}
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+    MACOSX_BUNDLE_ICON_FILE AppIcon
     MACOSX_BUNDLE TRUE
     WIN32_EXECUTABLE TRUE
 )
